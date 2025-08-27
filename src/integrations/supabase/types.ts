@@ -14,6 +14,96 @@ export type Database = {
   }
   public: {
     Tables: {
+      caution_payments: {
+        Row: {
+          amount: number
+          caution_request_id: string
+          created_at: string
+          id: string
+          status: string
+          stripe_payment_intent_id: string | null
+          tenant_profile_id: string
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          caution_request_id: string
+          created_at?: string
+          id?: string
+          status?: string
+          stripe_payment_intent_id?: string | null
+          tenant_profile_id: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          caution_request_id?: string
+          created_at?: string
+          id?: string
+          status?: string
+          stripe_payment_intent_id?: string | null
+          tenant_profile_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "caution_payments_caution_request_id_fkey"
+            columns: ["caution_request_id"]
+            isOneToOne: false
+            referencedRelation: "caution_requests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "caution_payments_tenant_profile_id_fkey"
+            columns: ["tenant_profile_id"]
+            isOneToOne: false
+            referencedRelation: "tenant_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      caution_requests: {
+        Row: {
+          amount: number
+          created_at: string
+          duration_months: number
+          expires_at: string
+          id: string
+          owner_id: string
+          property_address: string
+          status: string
+          tenant_email: string
+          tenant_phone: string
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          duration_months: number
+          expires_at?: string
+          id?: string
+          owner_id: string
+          property_address: string
+          status?: string
+          tenant_email: string
+          tenant_phone: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          duration_months?: number
+          expires_at?: string
+          id?: string
+          owner_id?: string
+          property_address?: string
+          status?: string
+          tenant_email?: string
+          tenant_phone?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       documents: {
         Row: {
           created_at: string
@@ -372,6 +462,71 @@ export type Database = {
           },
         ]
       }
+      tenant_profiles: {
+        Row: {
+          address_line1: string
+          address_line2: string | null
+          caution_request_id: string | null
+          city: string
+          country: string
+          created_at: string
+          email: string
+          first_name: string
+          gender: string | null
+          id: string
+          last_name: string
+          phone: string
+          postal_code: string
+          updated_at: string
+          user_id: string | null
+          verification_status: string
+        }
+        Insert: {
+          address_line1: string
+          address_line2?: string | null
+          caution_request_id?: string | null
+          city: string
+          country?: string
+          created_at?: string
+          email: string
+          first_name: string
+          gender?: string | null
+          id?: string
+          last_name: string
+          phone: string
+          postal_code: string
+          updated_at?: string
+          user_id?: string | null
+          verification_status?: string
+        }
+        Update: {
+          address_line1?: string
+          address_line2?: string | null
+          caution_request_id?: string | null
+          city?: string
+          country?: string
+          created_at?: string
+          email?: string
+          first_name?: string
+          gender?: string | null
+          id?: string
+          last_name?: string
+          phone?: string
+          postal_code?: string
+          updated_at?: string
+          user_id?: string | null
+          verification_status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tenant_profiles_caution_request_id_fkey"
+            columns: ["caution_request_id"]
+            isOneToOne: false
+            referencedRelation: "caution_requests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tenants: {
         Row: {
           birth_date: string | null
@@ -451,6 +606,47 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      verification_codes: {
+        Row: {
+          attempts: number
+          code: string
+          created_at: string
+          expires_at: string
+          id: string
+          tenant_profile_id: string
+          type: string
+          verified: boolean
+        }
+        Insert: {
+          attempts?: number
+          code: string
+          created_at?: string
+          expires_at?: string
+          id?: string
+          tenant_profile_id: string
+          type: string
+          verified?: boolean
+        }
+        Update: {
+          attempts?: number
+          code?: string
+          created_at?: string
+          expires_at?: string
+          id?: string
+          tenant_profile_id?: string
+          type?: string
+          verified?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "verification_codes_tenant_profile_id_fkey"
+            columns: ["tenant_profile_id"]
+            isOneToOne: false
+            referencedRelation: "tenant_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {

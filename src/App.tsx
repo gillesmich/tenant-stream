@@ -12,6 +12,8 @@ import Leases from "./pages/Leases";
 import Rents from "./pages/Rents";
 import Tenants from "./pages/Tenants";
 import Documents from "./pages/Documents";
+import CautionRequests from "./pages/CautionRequests";
+import CautionInvitation from "./pages/CautionInvitation";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -55,6 +57,12 @@ const App = () => (
                 <Documents />
               </ProtectedRoute>
             } />
+            <Route path="/cautions" element={
+              <ProtectedRoute>
+                <CautionRequests />
+              </ProtectedRoute>
+            } />
+            <Route path="/caution-invitation/:id" element={<CautionInvitation />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

@@ -291,12 +291,12 @@ const LandlordDashboard = () => {
             <CardContent>
               <div className="flex gap-2">
                 <Button asChild className="flex-1">
-                  <a href="/caution-requests">
+                  <a href="/cautions">
                     Voir les cautions
                   </a>
                 </Button>
                 <Button variant="outline" size="icon" asChild>
-                  <a href="/caution-requests">
+                  <a href="/cautions">
                     <Plus className="w-4 h-4" />
                   </a>
                 </Button>

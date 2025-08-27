@@ -13,7 +13,7 @@ const Navigation = () => {
     { name: "Locataires", href: "/tenants", icon: Users },
     { name: "Baux", href: "/leases", icon: FileText },
     { name: "Loyers", href: "/rents", icon: DollarSign },
-    { name: "Cautions", href: "/caution-requests", icon: Shield },
+    { name: "Cautions", href: "/cautions", icon: Shield },
     { name: "Paramètres", href: "/settings", icon: Settings },
   ];
 

@@ -1,9 +1,11 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Menu, X, Home, Users, FileText, DollarSign, Settings } from "lucide-react";
+import { Menu, X, Home, Users, FileText, DollarSign, Settings, LogOut } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
 
 const Navigation = () => {
   const [isOpen, setIsOpen] = useState(false);
+  const { signOut, user } = useAuth();
 
   const navItems = [
     { name: "Accueil", href: "/", icon: Home },
@@ -41,8 +43,13 @@ const Navigation = () => {
           </div>
 
           <div className="hidden md:flex items-center space-x-4">
-            <Button variant="ghost">Connexion</Button>
-            <Button variant="default">Démarrer</Button>
+            <span className="text-sm text-muted-foreground">
+              Bonjour, {user?.email}
+            </span>
+            <Button variant="ghost" size="sm" onClick={signOut}>
+              <LogOut className="w-4 h-4 mr-2" />
+              Déconnexion
+            </Button>
           </div>
 
           <button
@@ -71,8 +78,13 @@ const Navigation = () => {
                 </a>
               ))}
               <div className="flex flex-col space-y-2 pt-4">
-                <Button variant="ghost" size="sm">Connexion</Button>
-                <Button variant="default" size="sm">Démarrer</Button>
+                <span className="text-sm text-muted-foreground px-3">
+                  {user?.email}
+                </span>
+                <Button variant="ghost" size="sm" onClick={signOut}>
+                  <LogOut className="w-4 h-4 mr-2" />
+                  Déconnexion
+                </Button>
               </div>
             </div>
           </div>

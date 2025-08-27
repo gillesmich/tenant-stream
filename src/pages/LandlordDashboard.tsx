@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Navigation from "@/components/ui/navigation";
-import { Home, Users, FileText, Euro, Plus, TrendingUp, AlertTriangle } from "lucide-react";
+import { Home, Users, FileText, Euro, Plus, TrendingUp, AlertTriangle, Shield } from "lucide-react";
 
 const LandlordDashboard = () => {
   const { user } = useAuth();
@@ -271,6 +271,32 @@ const LandlordDashboard = () => {
                 </Button>
                 <Button variant="outline" size="icon" asChild>
                   <a href="/documents?action=add">
+                    <Plus className="w-4 h-4" />
+                  </a>
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="shadow-card hover:shadow-elegant transition-all duration-300">
+            <CardHeader>
+              <CardTitle className="flex items-center">
+                <Shield className="w-5 h-5 mr-2 text-primary" />
+                Cautions
+              </CardTitle>
+              <CardDescription>
+                Gérez les dépôts de garantie
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="flex gap-2">
+                <Button asChild className="flex-1">
+                  <a href="/caution-requests">
+                    Voir les cautions
+                  </a>
+                </Button>
+                <Button variant="outline" size="icon" asChild>
+                  <a href="/caution-requests">
                     <Plus className="w-4 h-4" />
                   </a>
                 </Button>

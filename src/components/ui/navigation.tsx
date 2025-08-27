@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Menu, X, Home, Users, FileText, DollarSign, Settings, LogOut } from "lucide-react";
+import { Menu, X, Home, Users, FileText, DollarSign, Settings, LogOut, Shield } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 
 const Navigation = () => {
@@ -13,6 +13,7 @@ const Navigation = () => {
     { name: "Locataires", href: "/tenants", icon: Users },
     { name: "Baux", href: "/leases", icon: FileText },
     { name: "Loyers", href: "/rents", icon: DollarSign },
+    { name: "Cautions", href: "/caution-requests", icon: Shield },
     { name: "Paramètres", href: "/settings", icon: Settings },
   ];
 

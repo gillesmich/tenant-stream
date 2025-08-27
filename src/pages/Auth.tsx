@@ -5,7 +5,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Home, Mail, Lock, User, Phone, Building } from "lucide-react";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Home, Mail, Lock, User, Phone, Building, UserCheck, Users } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 const Auth = () => {
@@ -17,7 +18,8 @@ const Auth = () => {
     firstName: "",
     lastName: "",
     phone: "",
-    company: ""
+    company: "",
+    userType: "proprietaire"
   });
   
   const { toast } = useToast();
@@ -77,6 +79,7 @@ const Auth = () => {
             last_name: signupForm.lastName,
             phone: signupForm.phone,
             company: signupForm.company,
+            user_type: signupForm.userType,
           }
         }
       });
@@ -243,6 +246,29 @@ const Auth = () => {
                         onChange={(e) => setSignupForm({ ...signupForm, company: e.target.value })}
                       />
                     </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Type de compte</Label>
+                    <RadioGroup
+                      value={signupForm.userType}
+                      onValueChange={(value) => setSignupForm({ ...signupForm, userType: value })}
+                      className="flex gap-6"
+                    >
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="proprietaire" id="proprietaire" />
+                        <Label htmlFor="proprietaire" className="flex items-center cursor-pointer">
+                          <UserCheck className="w-4 h-4 mr-2" />
+                          Propriétaire
+                        </Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="locataire" id="locataire" />
+                        <Label htmlFor="locataire" className="flex items-center cursor-pointer">
+                          <Users className="w-4 h-4 mr-2" />
+                          Locataire
+                        </Label>
+                      </div>
+                    </RadioGroup>
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="signup-password">Mot de passe</Label>

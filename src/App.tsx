@@ -10,6 +10,8 @@ import Auth from "./pages/Auth";
 import Properties from "./pages/Properties";
 import Leases from "./pages/Leases";
 import Rents from "./pages/Rents";
+import Tenants from "./pages/Tenants";
+import Documents from "./pages/Documents";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -41,6 +43,16 @@ const App = () => (
             <Route path="/rents" element={
               <ProtectedRoute>
                 <Rents />
+              </ProtectedRoute>
+            } />
+            <Route path="/tenants" element={
+              <ProtectedRoute>
+                <Tenants />
+              </ProtectedRoute>
+            } />
+            <Route path="/documents" element={
+              <ProtectedRoute>
+                <Documents />
               </ProtectedRoute>
             } />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

@@ -185,94 +185,84 @@ function generatePDFFromHTML(htmlContent: string): Uint8Array {
 }
 
 function generateStructuredPDF(title: string, subtitle: string, sections: string[]): Uint8Array {
-  const pdfHeader = "%PDF-1.4\n";
-  
-  // Créer le contenu du PDF avec les données structurées
-  let content = `BT
-/F1 16 Tf
-50 750 Td
-(${title.replace(/[()\\]/g, '')}) Tj
-0 -30 Td
-/F1 12 Tf
-(${subtitle.replace(/[()\\]/g, '')}) Tj
-0 -40 Td
-`;
+  const sanitize = (s: string) => s.replace(/[\r\n]+/g, ' ').replace(/[()\\]/g, '');
 
-  let yPos = 680;
-  sections.forEach((section, index) => {
-    if (yPos < 100) return; // Éviter le débordement de page
-    
-    const cleanSection = section.replace(/[()\\]/g, '').substring(0, 200);
-    content += `/F1 10 Tf
-0 ${yPos - 750} Td
-(${cleanSection}) Tj
-`;
-    yPos -= 60;
+  // Build the text content stream
+  let yPos = 760; // start near top of page (height 792)
+  const lines: string[] = [];
+  lines.push('BT');
+  lines.push('/F1 18 Tf');
+  lines.push(`50 ${yPos} Td`);
+  lines.push(`(${sanitize(title)}) Tj`);
+
+  if (subtitle) {
+    lines.push('0 -28 Td');
+    lines.push('/F1 12 Tf');
+    lines.push(`(${sanitize(subtitle)}) Tj`);
+  }
+
+  lines.push('/F1 10 Tf');
+  let currentY = 704; // move down below headings
+  let lastY = yPos - 28 - 28; // approximate last Y used
+
+  sections.forEach((section) => {
+    if (currentY < 100) return; // simple single-page guard
+    const text = sanitize(section).substring(0, 500);
+
+    // Move down relative to previous line
+    const deltaY = currentY - lastY;
+    lines.push(`0 ${deltaY} Td`); // relative vertical move
+    lines.push(`(${text}) Tj`);
+
+    lastY = currentY;
+    currentY -= 60;
   });
 
-  content += `ET`;
+  lines.push('ET');
 
-  const contentLength = content.length;
+  const contentStream = lines.join('\n');
+  const encoder = new TextEncoder();
 
-  const pdfContent = `1 0 obj
-<<
-/Type /Catalog
-/Pages 2 0 R
->>
-endobj
+  // Prepare PDF objects
+  const header = '%PDF-1.4\n';
 
-2 0 obj
-<<
-/Type /Pages
-/Kids [3 0 R]
-/Count 1
->>
-endobj
+  const obj1 = `1 0 obj\n<<\n/Type /Catalog\n/Pages 2 0 R\n>>\nendobj\n\n`;
 
-3 0 obj
-<<
-/Type /Page
-/Parent 2 0 R
-/MediaBox [0 0 612 792]
-/Contents 4 0 R
-/Resources <<
-/Font <<
-/F1 <<
-/Type /Font
-/Subtype /Type1
-/BaseFont /Helvetica
->>
->>
->>
->>
-endobj
+  const obj2 = `2 0 obj\n<<\n/Type /Pages\n/Kids [3 0 R]\n/Count 1\n>>\nendobj\n\n`;
 
-4 0 obj
-<<
-/Length ${contentLength}
->>
-stream
-${content}
-endstream
-endobj
+  const obj3 = `3 0 obj\n<<\n/Type /Page\n/Parent 2 0 R\n/MediaBox [0 0 612 792]\n/Resources <<\n  /Font <<\n    /F1 4 0 R\n  >>\n>>\n/Contents 5 0 R\n>>\nendobj\n\n`;
 
-xref
-0 5
-0000000000 65535 f 
-0000000010 00000 n 
-0000000079 00000 n 
-0000000173 00000 n 
-0000000301 00000 n 
-trailer
-<<
-/Size 5
-/Root 1 0 R
->>
-startxref
-554
-%%EOF
-`;
+  const obj4 = `4 0 obj\n<<\n/Type /Font\n/Subtype /Type1\n/BaseFont /Helvetica\n>>\nendobj\n\n`;
 
-  const fullPdf = pdfHeader + pdfContent;
-  return new TextEncoder().encode(fullPdf);
+  const contentBytes = encoder.encode(contentStream);
+  const obj5Header = `5 0 obj\n<<\n/Length ${contentBytes.length}\n>>\nstream\n`;
+  const obj5Footer = `\nendstream\nendobj\n\n`;
+
+  // Build body and compute byte offsets
+  const offsets: number[] = []; // index = object number
+  let body = '';
+  let pos = header.length; // byte position starts after header
+
+  // Object 1
+  offsets[1] = pos; body += obj1; pos += obj1.length;
+  // Object 2
+  offsets[2] = pos; body += obj2; pos += obj2.length;
+  // Object 3
+  offsets[3] = pos; body += obj3; pos += obj3.length;
+  // Object 4
+  offsets[4] = pos; body += obj4; pos += obj4.length;
+  // Object 5 (stream)
+  offsets[5] = pos; body += obj5Header; pos += obj5Header.length;
+  body += contentStream; pos += contentStream.length;
+  body += obj5Footer; pos += obj5Footer.length;
+
+  const xrefPos = header.length + body.length;
+  const pad = (n: number) => n.toString().padStart(10, '0');
+
+  const xref = `xref\n0 6\n0000000000 65535 f \n${pad(offsets[1])} 00000 n \n${pad(offsets[2])} 00000 n \n${pad(offsets[3])} 00000 n \n${pad(offsets[4])} 00000 n \n${pad(offsets[5])} 00000 n \n`;
+
+  const trailer = `trailer\n<<\n/Size 6\n/Root 1 0 R\n>>\nstartxref\n${xrefPos}\n%%EOF\n`;
+
+  const pdf = header + body + xref + trailer;
+  return encoder.encode(pdf);
 }

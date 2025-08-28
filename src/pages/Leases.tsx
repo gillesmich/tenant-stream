@@ -77,7 +77,13 @@ const Leases = () => {
             <h1 className="text-3xl font-bold mb-2">Gestion des Baux</h1>
             <p className="text-muted-foreground">Créez et gérez tous vos contrats de location</p>
           </div>
-          <Button className="bg-gradient-primary">
+          <Button 
+            className="bg-gradient-primary"
+            onClick={() => {
+              // TODO: Implement new lease creation modal
+              console.log("Nouveau bail clicked");
+            }}
+          >
             <Plus className="w-4 h-4 mr-2" />
             Nouveau bail
           </Button>
@@ -153,17 +159,32 @@ const Leases = () => {
                 </div>
 
                 <div className="flex space-x-2">
-                  <Button variant="outline" size="sm" className="flex-1">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="flex-1"
+                    onClick={() => console.log("Download PDF for lease", lease.id)}
+                  >
                     <Download className="w-4 h-4 mr-1" />
                     PDF
                   </Button>
                   {!lease.signed && (
-                    <Button variant="outline" size="sm" className="flex-1">
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="flex-1"
+                      onClick={() => console.log("Send lease", lease.id)}
+                    >
                       <Send className="w-4 h-4 mr-1" />
                       Envoyer
                     </Button>
                   )}
-                  <Button variant="default" size="sm" className="flex-1">
+                  <Button 
+                    variant="default" 
+                    size="sm" 
+                    className="flex-1"
+                    onClick={() => console.log("Edit lease", lease.id)}
+                  >
                     Modifier
                   </Button>
                 </div>
@@ -179,7 +200,12 @@ const Leases = () => {
             <p className="text-muted-foreground mb-4">
               {searchTerm ? "Aucun bail ne correspond à votre recherche" : "Vous n'avez pas encore créé de bail"}
             </p>
-            <Button>
+            <Button
+              onClick={() => {
+                // TODO: Implement new lease creation modal
+                console.log("Create first lease clicked");
+              }}
+            >
               <Plus className="w-4 h-4 mr-2" />
               Créer votre premier bail
             </Button>

@@ -175,7 +175,12 @@ const Properties = () => {
                 )}
 
                 <div className="flex space-x-2 pt-2">
-                  <Button variant="outline" size="sm" className="flex-1">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="flex-1"
+                    onClick={() => console.log("View details for property", property.id)}
+                  >
                     <Eye className="w-4 h-4 mr-1" />
                     Détails
                   </Button>

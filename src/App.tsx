@@ -16,6 +16,7 @@ import Documents from "./pages/Documents";
 import CautionRequests from "./pages/CautionRequests";
 import CautionInvitation from "./pages/CautionInvitation";
 import NotFound from "./pages/NotFound";
+import { CommandPalette } from "./components/CommandPalette";
 
 const queryClient = new QueryClient();
 
@@ -25,6 +26,7 @@ const App = () => (
       <TooltipProvider>
         <Toaster />
         <Sonner />
+        <CommandPalette />
         <BrowserRouter>
           <Routes>
             <Route path="/" element={<Home />} />

@@ -76,7 +76,7 @@ export function CommandPalette() {
 
   useEffect(() => {
     const down = (e: KeyboardEvent) => {
-      if (e.key === "/" && (e.metaKey || e.ctrlKey || !e.target || (e.target as HTMLElement).tagName !== "INPUT")) {
+      if (e.key === "/") {
         e.preventDefault();
         setOpen((open) => !open);
       }

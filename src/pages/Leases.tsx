@@ -78,14 +78,26 @@ const Leases = () => {
         description: "Le PDF du bail est en cours de génération...",
       });
       
-      const { data, error } = await supabase.functions.invoke('generate-lease-pdf', {
-        body: { leaseId }
-      });
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData?.session?.access_token || '';
 
-      if (error) throw error;
+      const res = await fetch(
+        'https://vbpyykdkaoktzuewbzzl.supabase.co/functions/v1/generate-lease-pdf',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': token ? `Bearer ${token}` : '',
+          },
+          body: JSON.stringify({ leaseId }),
+        }
+      );
+
+      if (!res.ok) throw new Error('Failed to generate PDF');
 
       // Créer et télécharger le PDF
-      const blob = new Blob([data], { type: 'application/pdf' });
+      const buffer = await res.arrayBuffer();
+      const blob = new Blob([buffer], { type: 'application/pdf' });
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;

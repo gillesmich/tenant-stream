@@ -19,7 +19,11 @@ const Navigation = () => {
 ]; 
 
   const location = useLocation();
-  if (location.pathname.startsWith("/auth")) return null;
+  console.log('Navigation: Current pathname:', location.pathname);
+  if (location.pathname.startsWith("/auth")) {
+    console.log('Navigation: Hiding on auth page');
+    return null;
+  }
 
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 bg-background/95 backdrop-blur border-b border-border">

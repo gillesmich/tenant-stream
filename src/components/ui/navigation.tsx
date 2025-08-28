@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Menu, X, Home, Users, FileText, DollarSign, Settings, LogOut, Shield } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import { useLocation } from "react-router-dom";
 
 const Navigation = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -15,7 +16,10 @@ const Navigation = () => {
     { name: "Loyers", href: "/rents", icon: DollarSign },
     { name: "Cautions", href: "/cautions", icon: Shield },
     { name: "Paramètres", href: "/settings", icon: Settings },
-  ];
+]; 
+
+  const location = useLocation();
+  if (location.pathname.startsWith("/auth")) return null;
 
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 bg-background/95 backdrop-blur border-b border-border">

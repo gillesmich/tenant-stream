@@ -28,7 +28,7 @@ const Auth = () => {
     const checkUser = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (session) {
-        window.location.href = "/";
+        window.location.href = "/dashboard";
       }
     };
     checkUser();
@@ -51,7 +51,7 @@ const Auth = () => {
           title: "Connexion réussie",
           description: "Bienvenue dans LocaManager",
         });
-        window.location.href = "/";
+        window.location.href = "/dashboard";
       }
     } catch (error: any) {
       toast({
@@ -73,7 +73,7 @@ const Auth = () => {
         email: signupForm.email,
         password: signupForm.password,
         options: {
-          emailRedirectTo: `${window.location.origin}/`,
+          emailRedirectTo: `${window.location.origin}/dashboard`,
           data: {
             first_name: signupForm.firstName,
             last_name: signupForm.lastName,

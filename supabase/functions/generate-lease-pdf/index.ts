@@ -179,7 +179,7 @@ function generatePDFFromHTML(htmlContent: string): Uint8Array {
   const subtitle = getTagText('h2') || '';
 
   const sections: string[] = [];
-  const sectionRegex = /<div[^>]*class=["'][^"']*section[^"']*["'][^>]*>([\\s\\S]*?)<\\/div>/gi;
+  const sectionRegex = new RegExp('<div[^>]*class=["\'][^"\']*section[^"\']*["\'][^>]*>([\\s\\S]*?)<\\/div>', 'gi');
   let m: RegExpExecArray | null;
   while ((m = sectionRegex.exec(htmlContent)) !== null) {
     const text = stripHtmlTags(m[1]);

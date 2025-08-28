@@ -83,6 +83,75 @@ const Rents = () => {
     }
   };
 
+  const createNewRent = async () => {
+    try {
+      // Récupérer les baux actifs
+      const { data: activeLeases, error } = await supabase
+        .from('leases')
+        .select(`
+          id,
+          rent_amount,
+          charges_amount,
+          properties (title),
+          tenants (first_name, last_name)
+        `)
+        .eq('owner_id', user?.id)
+        .eq('status', 'actif');
+
+      if (error) throw error;
+
+      if (!activeLeases || activeLeases.length === 0) {
+        toast({
+          title: "Aucun bail actif",
+          description: "Vous devez avoir au moins un bail actif pour créer un loyer",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Pour le moment, créer automatiquement les loyers pour tous les baux actifs pour le mois suivant
+      const nextMonth = new Date();
+      nextMonth.setMonth(nextMonth.getMonth() + 1);
+      const year = nextMonth.getFullYear();
+      const month = nextMonth.getMonth();
+      
+      const startDate = new Date(year, month, 1);
+      const endDate = new Date(year, month + 1, 0);
+      const dueDate = new Date(year, month, 5); // Échéance le 5 du mois
+
+      const rentsToCreate = activeLeases.map(lease => ({
+        lease_id: lease.id,
+        owner_id: user?.id,
+        period_start: startDate.toISOString().split('T')[0],
+        period_end: endDate.toISOString().split('T')[0],
+        due_date: dueDate.toISOString().split('T')[0],
+        rent_amount: lease.rent_amount,
+        charges_amount: lease.charges_amount || 0,
+        total_amount: (lease.rent_amount || 0) + (lease.charges_amount || 0),
+        status: 'en_attente'
+      }));
+
+      const { error: insertError } = await supabase
+        .from('rents')
+        .insert(rentsToCreate);
+
+      if (insertError) throw insertError;
+
+      toast({
+        title: "Loyers créés",
+        description: `${rentsToCreate.length} nouveau(x) loyer(s) créé(s) pour le mois prochain`,
+      });
+
+      fetchRents();
+    } catch (error: any) {
+      toast({
+        title: "Erreur",
+        description: "Impossible de créer les nouveaux loyers",
+        variant: "destructive",
+      });
+    }
+  };
+
   const filteredRents = rents.filter(rent => {
     const propertyTitle = rent.lease?.property?.title || '';
     const tenantName = rent.lease?.tenant ? `${rent.lease.tenant.first_name} ${rent.lease.tenant.last_name}` : '';
@@ -160,13 +229,7 @@ const Rents = () => {
           </div>
           <Button 
             className="bg-gradient-primary"
-            onClick={() => {
-              // TODO: Implement new rent creation modal
-              toast({
-                title: "Fonctionnalité à venir",
-                description: "La création de nouveaux loyers sera bientôt disponible",
-              });
-            }}
+            onClick={() => createNewRent()}
           >
             <Plus className="w-4 h-4 mr-2" />
             Nouveau loyer
@@ -303,15 +366,7 @@ const Rents = () => {
             <p className="text-muted-foreground mb-4">
               {searchTerm ? "Aucun loyer ne correspond à votre recherche" : "Vous n'avez pas encore ajouté de loyer"}
             </p>
-            <Button
-              onClick={() => {
-                // TODO: Implement new rent creation modal
-                toast({
-                  title: "Fonctionnalité à venir",
-                  description: "La création de nouveaux loyers sera bientôt disponible",
-                });
-              }}
-            >
+            <Button onClick={() => createNewRent()}>
               <Plus className="w-4 h-4 mr-2" />
               Ajouter un loyer
             </Button>

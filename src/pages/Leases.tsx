@@ -1,71 +1,159 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
 import { Plus, Search, FileText, Calendar, Euro, Download, Send } from "lucide-react";
 import Navigation from "@/components/ui/navigation";
+import { LeaseForm } from "@/components/LeaseForm";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
+import { useToast } from "@/hooks/use-toast";
 
 const Leases = () => {
+  const { user } = useAuth();
+  const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [leases, setLeases] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedLease, setSelectedLease] = useState<any>(null);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
 
-  // Données d'exemple
-  const leases = [
-    {
-      id: 1,
-      property: "Appartement Centre-Ville",
-      tenant: "Marie Dubois",
-      type: "Meublé",
-      startDate: "2024-01-15",
-      endDate: "2025-01-14",
-      rent: 1200,
-      deposit: 2400,
-      status: "Actif",
-      signed: true
-    },
-    {
-      id: 2,
-      property: "Maison Familiale",
-      tenant: "Famille Martin",
-      type: "Vide",
-      startDate: "2024-03-01",
-      endDate: "2027-02-28",
-      rent: 2200,
-      deposit: 4400,
-      status: "Actif",
-      signed: true
-    },
-    {
-      id: 3,
-      property: "Studio Quartier Latin",
-      tenant: "En attente",
-      type: "Meublé",
-      startDate: "2024-12-01",
-      endDate: "2025-11-30",
-      rent: 800,
-      deposit: 1600,
-      status: "Brouillon",
-      signed: false
+  useEffect(() => {
+    if (user) {
+      loadLeases();
     }
-  ];
+  }, [user]);
+
+  const loadLeases = async () => {
+    if (!user) return;
+    
+    try {
+      const { data, error } = await supabase
+        .from('leases')
+        .select(`
+          *,
+          properties (title, address),
+          tenants (first_name, last_name)
+        `)
+        .eq('owner_id', user.id)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setLeases(data || []);
+    } catch (error: any) {
+      toast({
+        title: "Erreur",
+        description: "Impossible de charger les baux",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleFormSuccess = () => {
+    setIsDialogOpen(false);
+    setSelectedLease(null);
+    loadLeases();
+  };
+
+  const handleCancel = () => {
+    setIsDialogOpen(false);
+    setSelectedLease(null);
+  };
+
+  const handleEdit = (lease: any) => {
+    setSelectedLease(lease);
+    setIsDialogOpen(true);
+  };
+
+  const generatePDF = async (leaseId: string) => {
+    try {
+      toast({
+        title: "Génération du PDF",
+        description: "Le PDF du bail est en cours de génération...",
+      });
+      
+      const { data, error } = await supabase.functions.invoke('generate-lease-pdf', {
+        body: { leaseId }
+      });
+
+      if (error) throw error;
+
+      // Créer et télécharger le PDF
+      const blob = new Blob([data], { type: 'application/pdf' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `bail-${leaseId}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (error: any) {
+      toast({
+        title: "Erreur",
+        description: "Impossible de générer le PDF",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const sendLease = async (leaseId: string) => {
+    try {
+      const { error } = await supabase.functions.invoke('send-lease-notification', {
+        body: { leaseId }
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Bail envoyé",
+        description: "Le bail a été envoyé au locataire",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Erreur",
+        description: "Impossible d'envoyer le bail",
+        variant: "destructive",
+      });
+    }
+  };
 
   const filteredLeases = leases.filter(lease => {
-    const matchesSearch = lease.property.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         lease.tenant.toLowerCase().includes(searchTerm.toLowerCase());
+    const propertyName = lease.properties?.title || '';
+    const tenantName = `${lease.tenants?.first_name || ''} ${lease.tenants?.last_name || ''}`.trim();
+    const matchesSearch = propertyName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         tenantName.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === "all" || lease.status.toLowerCase() === statusFilter;
     return matchesSearch && matchesStatus;
   });
 
   const getStatusVariant = (status: string) => {
     switch (status) {
-      case "Actif": return "default";
-      case "Expiré": return "destructive";
-      case "Brouillon": return "secondary";
+      case "actif": return "default";
+      case "expire": return "destructive";
+      case "brouillon": return "secondary";
       default: return "secondary";
     }
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Navigation />
+        <div className="container mx-auto px-4 pt-24 pb-12">
+          <div className="flex items-center justify-center h-64">
+            <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary"></div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -77,16 +165,24 @@ const Leases = () => {
             <h1 className="text-3xl font-bold mb-2">Gestion des Baux</h1>
             <p className="text-muted-foreground">Créez et gérez tous vos contrats de location</p>
           </div>
-          <Button 
-            className="bg-gradient-primary"
-            onClick={() => {
-              // TODO: Implement new lease creation modal
-              console.log("Nouveau bail clicked");
-            }}
-          >
-            <Plus className="w-4 h-4 mr-2" />
-            Nouveau bail
-          </Button>
+          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+            <DialogTrigger asChild>
+              <Button 
+                className="bg-gradient-primary"
+                onClick={() => setSelectedLease(null)}
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                Nouveau bail
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+              <LeaseForm
+                lease={selectedLease}
+                onSuccess={handleFormSuccess}
+                onCancel={handleCancel}
+              />
+            </DialogContent>
+          </Dialog>
         </div>
 
         <div className="flex flex-col md:flex-row gap-4 mb-6">
@@ -118,15 +214,24 @@ const Leases = () => {
               <CardHeader>
                 <div className="flex justify-between items-start">
                   <div>
-                    <CardTitle className="text-lg">{lease.property}</CardTitle>
-                    <CardDescription>{lease.tenant}</CardDescription>
+                    <CardTitle className="text-lg">{lease.properties?.title || 'Propriété non trouvée'}</CardTitle>
+                    <CardDescription>
+                      {lease.tenants 
+                        ? `${lease.tenants.first_name} ${lease.tenants.last_name}`
+                        : 'Locataire non assigné'
+                      }
+                    </CardDescription>
                   </div>
                   <div className="flex gap-2">
                     <Badge variant={getStatusVariant(lease.status)}>
                       {lease.status}
                     </Badge>
-                    <Badge variant="outline" className={lease.type === "Meublé" ? "border-accent text-accent" : ""}>
-                      {lease.type}
+                    <Badge variant="outline" className={lease.lease_type === "meuble" ? "border-accent text-accent" : ""}>
+                      {lease.lease_type === "vide" ? "Vide" : 
+                       lease.lease_type === "meuble" ? "Meublé" :
+                       lease.lease_type === "commercial" ? "Commercial" :
+                       lease.lease_type === "professionnel" ? "Professionnel" :
+                       lease.lease_type}
                     </Badge>
                   </div>
                 </div>
@@ -136,15 +241,19 @@ const Leases = () => {
                   <div className="flex items-center">
                     <Calendar className="w-4 h-4 mr-2 text-muted-foreground" />
                     <div>
-                      <p className="font-medium">Début: {new Date(lease.startDate).toLocaleDateString('fr-FR')}</p>
-                      <p className="text-muted-foreground">Fin: {new Date(lease.endDate).toLocaleDateString('fr-FR')}</p>
+                      <p className="font-medium">Début: {new Date(lease.start_date).toLocaleDateString('fr-FR')}</p>
+                      <p className="text-muted-foreground">
+                        Fin: {lease.end_date ? new Date(lease.end_date).toLocaleDateString('fr-FR') : 'Non définie'}
+                      </p>
                     </div>
                   </div>
                   <div className="flex items-center">
                     <Euro className="w-4 h-4 mr-2 text-muted-foreground" />
                     <div>
-                      <p className="font-medium">{lease.rent}€/mois</p>
-                      <p className="text-muted-foreground">Dépôt: {lease.deposit}€</p>
+                      <p className="font-medium">{lease.rent_amount}€/mois</p>
+                      <p className="text-muted-foreground">
+                        Dépôt: {lease.deposit_amount ? `${lease.deposit_amount}€` : 'Non défini'}
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -153,7 +262,7 @@ const Leases = () => {
                   <div className="flex items-center space-x-2">
                     <FileText className="w-4 h-4 text-muted-foreground" />
                     <span className="text-sm">
-                      {lease.signed ? "✅ Signé" : "⏳ En attente de signature"}
+                      {lease.signed_by_tenant && lease.signed_by_owner ? "✅ Signé" : "⏳ En attente de signature"}
                     </span>
                   </div>
                 </div>
@@ -163,17 +272,17 @@ const Leases = () => {
                     variant="outline" 
                     size="sm" 
                     className="flex-1"
-                    onClick={() => console.log("Download PDF for lease", lease.id)}
+                    onClick={() => generatePDF(lease.id)}
                   >
                     <Download className="w-4 h-4 mr-1" />
                     PDF
                   </Button>
-                  {!lease.signed && (
+                  {!(lease.signed_by_tenant && lease.signed_by_owner) && (
                     <Button 
                       variant="outline" 
                       size="sm" 
                       className="flex-1"
-                      onClick={() => console.log("Send lease", lease.id)}
+                      onClick={() => sendLease(lease.id)}
                     >
                       <Send className="w-4 h-4 mr-1" />
                       Envoyer
@@ -183,7 +292,7 @@ const Leases = () => {
                     variant="default" 
                     size="sm" 
                     className="flex-1"
-                    onClick={() => console.log("Edit lease", lease.id)}
+                    onClick={() => handleEdit(lease)}
                   >
                     Modifier
                   </Button>
@@ -200,15 +309,21 @@ const Leases = () => {
             <p className="text-muted-foreground mb-4">
               {searchTerm ? "Aucun bail ne correspond à votre recherche" : "Vous n'avez pas encore créé de bail"}
             </p>
-            <Button
-              onClick={() => {
-                // TODO: Implement new lease creation modal
-                console.log("Create first lease clicked");
-              }}
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              Créer votre premier bail
-            </Button>
+            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+              <DialogTrigger asChild>
+                <Button onClick={() => setSelectedLease(null)}>
+                  <Plus className="w-4 h-4 mr-2" />
+                  Créer votre premier bail
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+                <LeaseForm
+                  lease={selectedLease}
+                  onSuccess={handleFormSuccess}
+                  onCancel={handleCancel}
+                />
+              </DialogContent>
+            </Dialog>
           </div>
         )}
       </div>

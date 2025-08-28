@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { Navigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,6 +12,8 @@ import { useToast } from "@/hooks/use-toast";
 
 const Auth = () => {
   const [loading, setLoading] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [checkingAuth, setCheckingAuth] = useState(true);
   const [loginForm, setLoginForm] = useState({ email: "", password: "" });
   const [signupForm, setSignupForm] = useState({
     email: "",
@@ -27,12 +30,24 @@ const Auth = () => {
   useEffect(() => {
     const checkUser = async () => {
       const { data: { session } } = await supabase.auth.getSession();
-      if (session) {
-        window.location.href = "/dashboard";
-      }
+      setIsAuthenticated(!!session);
+      setCheckingAuth(false);
     };
     checkUser();
   }, []);
+
+  // Redirect authenticated users
+  if (checkingAuth) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-background via-secondary/20 to-accent/10 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
+  if (isAuthenticated) {
+    return <Navigate to="/dashboard" replace />;
+  }
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -51,7 +66,7 @@ const Auth = () => {
           title: "Connexion réussie",
           description: "Bienvenue dans LocaManager",
         });
-        window.location.href = "/dashboard";
+        setIsAuthenticated(true);
       }
     } catch (error: any) {
       toast({

@@ -259,6 +259,32 @@ const LandlordDashboard = () => {
                 États des lieux
               </CardTitle>
               <CardDescription>
+                Gérez vos inventaires
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="flex gap-2">
+                <Button asChild className="flex-1">
+                  <a href="/inventories">
+                    Voir les états des lieux
+                  </a>
+                </Button>
+                <Button variant="outline" size="icon" asChild>
+                  <a href="/inventories">
+                    <Plus className="w-4 h-4" />
+                  </a>
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="shadow-card hover:shadow-elegant transition-all duration-300">
+            <CardHeader>
+              <CardTitle className="flex items-center">
+                <FileText className="w-5 h-5 mr-2 text-primary" />
+                Documents
+              </CardTitle>
+              <CardDescription>
                 Gérez vos documents
               </CardDescription>
             </CardHeader>

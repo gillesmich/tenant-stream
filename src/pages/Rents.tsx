@@ -158,7 +158,16 @@ const Rents = () => {
             <h1 className="text-3xl font-bold mb-2">Gestion des Loyers</h1>
             <p className="text-muted-foreground">Suivez les paiements et générez les quittances</p>
           </div>
-          <Button className="bg-gradient-primary">
+          <Button 
+            className="bg-gradient-primary"
+            onClick={() => {
+              // TODO: Implement new rent creation modal
+              toast({
+                title: "Fonctionnalité à venir",
+                description: "La création de nouveaux loyers sera bientôt disponible",
+              });
+            }}
+          >
             <Plus className="w-4 h-4 mr-2" />
             Nouveau loyer
           </Button>
@@ -294,7 +303,15 @@ const Rents = () => {
             <p className="text-muted-foreground mb-4">
               {searchTerm ? "Aucun loyer ne correspond à votre recherche" : "Vous n'avez pas encore ajouté de loyer"}
             </p>
-            <Button>
+            <Button
+              onClick={() => {
+                // TODO: Implement new rent creation modal
+                toast({
+                  title: "Fonctionnalité à venir",
+                  description: "La création de nouveaux loyers sera bientôt disponible",
+                });
+              }}
+            >
               <Plus className="w-4 h-4 mr-2" />
               Ajouter un loyer
             </Button>

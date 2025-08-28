@@ -177,6 +177,42 @@ export type Database = {
           },
         ]
       }
+      inventories: {
+        Row: {
+          created_at: string
+          general_comments: string | null
+          id: string
+          inventory_date: string
+          inventory_type: string
+          owner_id: string
+          property_id: string | null
+          rooms: Json
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          general_comments?: string | null
+          id?: string
+          inventory_date: string
+          inventory_type: string
+          owner_id: string
+          property_id?: string | null
+          rooms?: Json
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          general_comments?: string | null
+          id?: string
+          inventory_date?: string
+          inventory_type?: string
+          owner_id?: string
+          property_id?: string | null
+          rooms?: Json
+          updated_at?: string
+        }
+        Relationships: []
+      }
       leases: {
         Row: {
           charges_amount: number | null

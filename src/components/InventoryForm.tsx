@@ -2,6 +2,8 @@ import { useState } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
@@ -35,7 +37,7 @@ const roomSchema = z.object({
   condition: z.enum(["neuf", "bon", "moyen", "mauvais"], {
     required_error: "L'état de la pièce est requis"
   }),
-  photos: z.array(z.instanceof(File)).optional()
+  photos: z.union([z.array(z.instanceof(File)), z.array(z.string())]).optional()
 });
 
 const inventorySchema = z.object({
@@ -51,12 +53,13 @@ const inventorySchema = z.object({
 type InventoryFormData = z.infer<typeof inventorySchema>;
 
 interface InventoryFormProps {
-  onSubmit: (data: InventoryFormData) => void;
+  onSubmit: (data: any) => void;
   initialData?: Partial<InventoryFormData>;
 }
 
 export function InventoryForm({ onSubmit, initialData }: InventoryFormProps) {
   const [photoFiles, setPhotoFiles] = useState<{ [key: number]: File[] }>({});
+  const { user } = useAuth();
 
   const form = useForm<InventoryFormData>({
     resolver: zodResolver(inventorySchema),
@@ -88,7 +91,7 @@ export function InventoryForm({ onSubmit, initialData }: InventoryFormProps) {
       }));
       
       const currentPhotos = form.getValues(`rooms.${roomIndex}.photos`) || [];
-      form.setValue(`rooms.${roomIndex}.photos`, [...currentPhotos, ...newFiles]);
+      // Don't set form value here as we manage files separately
     }
   };
 
@@ -101,7 +104,7 @@ export function InventoryForm({ onSubmit, initialData }: InventoryFormProps) {
       [roomIndex]: updatedFiles
     }));
     
-    form.setValue(`rooms.${roomIndex}.photos`, updatedFiles);
+    // Don't set form value here as we manage files separately
   };
 
   const addRoom = () => {
@@ -113,16 +116,49 @@ export function InventoryForm({ onSubmit, initialData }: InventoryFormProps) {
     });
   };
 
-  const handleSubmit = (data: InventoryFormData) => {
-    // Merge photo files with form data
-    const dataWithPhotos = {
+  const handleSubmit = async (data: InventoryFormData) => {
+    if (!user) return;
+    
+    // Upload photos and get URLs
+    const roomsWithPhotos = await Promise.all(
+      data.rooms.map(async (room, index) => {
+        const photos = photoFiles[index] || [];
+        const photoUrls = await Promise.all(
+          photos.map(async (photo) => {
+            const fileName = `${Date.now()}-${photo.name}`;
+            const filePath = `${user.id}/${fileName}`;
+            
+            const { error } = await supabase.storage
+              .from('inventory-photos')
+              .upload(filePath, photo);
+            
+            if (error) {
+              console.error('Upload error:', error);
+              return null;
+            }
+            
+            const { data: { publicUrl } } = supabase.storage
+              .from('inventory-photos')
+              .getPublicUrl(filePath);
+              
+            return publicUrl;
+          })
+        );
+        
+        return {
+          ...room,
+          photos: photoUrls.filter(url => url !== null)
+        };
+      })
+    );
+
+    // Merge the photos with the form data
+    const formDataWithPhotos = {
       ...data,
-      rooms: data.rooms.map((room, index) => ({
-        ...room,
-        photos: photoFiles[index] || []
-      }))
+      rooms: roomsWithPhotos
     };
-    onSubmit(dataWithPhotos);
+    
+    onSubmit(formDataWithPhotos);
   };
 
   return (

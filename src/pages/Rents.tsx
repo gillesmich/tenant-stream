@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -6,88 +6,147 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, Search, Euro, Calendar, Mail, AlertTriangle, CheckCircle, Download } from "lucide-react";
 import Navigation from "@/components/ui/navigation";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
+import { useToast } from "@/hooks/use-toast";
 
 const Rents = () => {
+  const { user } = useAuth();
+  const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [rents, setRents] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  // Données d'exemple
-  const rents = [
-    {
-      id: 1,
-      property: "Appartement Centre-Ville",
-      tenant: "Marie Dubois",
-      amount: 1200,
-      month: "2024-12",
-      dueDate: "2024-12-05",
-      status: "Payé",
-      paidDate: "2024-12-03",
-      receiptSent: true
-    },
-    {
-      id: 2,
-      property: "Maison Familiale",
-      tenant: "Famille Martin",
-      amount: 2200,
-      month: "2024-12",
-      dueDate: "2024-12-01",
-      status: "Payé",
-      paidDate: "2024-12-01",
-      receiptSent: true
-    },
-    {
-      id: 3,
-      property: "Appartement Centre-Ville",
-      tenant: "Marie Dubois",
-      amount: 1200,
-      month: "2025-01",
-      dueDate: "2025-01-05",
-      status: "En attente",
-      paidDate: null,
-      receiptSent: false
-    },
-    {
-      id: 4,
-      property: "Studio Quartier Latin",
-      tenant: "Pierre Durand",
-      amount: 800,
-      month: "2024-11",
-      dueDate: "2024-11-05",
-      status: "Retard",
-      paidDate: null,
-      receiptSent: false,
-      daysLate: 25
+  useEffect(() => {
+    if (user) {
+      fetchRents();
     }
-  ];
+  }, [user]);
+
+  const fetchRents = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('rents')
+        .select(`
+          *,
+          lease:leases(
+            property:properties(title, address),
+            tenant:tenants(first_name, last_name)
+          )
+        `)
+        .eq('owner_id', user?.id)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setRents(data || []);
+    } catch (error) {
+      console.error('Error fetching rents:', error);
+      toast({
+        title: "Erreur",
+        description: "Impossible de charger les loyers",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const markAsPaid = async (rentId: string) => {
+    try {
+      const { error } = await supabase
+        .from('rents')
+        .update({
+          status: 'paye',
+          paid_date: new Date().toISOString().split('T')[0],
+          paid_amount: rents.find(r => r.id === rentId)?.total_amount || 0,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', rentId)
+        .eq('owner_id', user?.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Succès",
+        description: "Le loyer a été marqué comme payé",
+      });
+
+      fetchRents(); // Refresh the data
+    } catch (error) {
+      console.error('Error marking rent as paid:', error);
+      toast({
+        title: "Erreur",
+        description: "Impossible de marquer le loyer comme payé",
+        variant: "destructive",
+      });
+    }
+  };
 
   const filteredRents = rents.filter(rent => {
-    const matchesSearch = rent.property.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         rent.tenant.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = statusFilter === "all" || rent.status.toLowerCase().replace(" ", "_") === statusFilter;
-    return matchesSearch && matchesStatus;
+    const propertyTitle = rent.lease?.property?.title || '';
+    const tenantName = rent.lease?.tenant ? `${rent.lease.tenant.first_name} ${rent.lease.tenant.last_name}` : '';
+    
+    const matchesSearch = propertyTitle.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         tenantName.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    let statusMatch = false;
+    if (statusFilter === "all") {
+      statusMatch = true;
+    } else if (statusFilter === "paye" && rent.status === "paye") {
+      statusMatch = true;
+    } else if (statusFilter === "en_attente" && rent.status === "en_attente") {
+      statusMatch = true;
+    } else if (statusFilter === "retard" && rent.status === "retard") {
+      statusMatch = true;
+    }
+    
+    return matchesSearch && statusMatch;
   });
 
   const getStatusVariant = (status: string) => {
     switch (status) {
-      case "Payé": return "default";
-      case "En attente": return "secondary";
-      case "Retard": return "destructive";
+      case "paye": return "default";
+      case "en_attente": return "secondary";
+      case "retard": return "destructive";
       default: return "secondary";
     }
   };
 
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case "Payé": return <CheckCircle className="w-4 h-4" />;
-      case "En attente": return <Calendar className="w-4 h-4" />;
-      case "Retard": return <AlertTriangle className="w-4 h-4" />;
+      case "paye": return <CheckCircle className="w-4 h-4" />;
+      case "en_attente": return <Calendar className="w-4 h-4" />;
+      case "retard": return <AlertTriangle className="w-4 h-4" />;
       default: return <Calendar className="w-4 h-4" />;
     }
   };
 
-  const totalAmount = filteredRents.reduce((sum, rent) => sum + rent.amount, 0);
-  const paidAmount = filteredRents.filter(rent => rent.status === "Payé").reduce((sum, rent) => sum + rent.amount, 0);
+  const getStatusLabel = (status: string) => {
+    switch (status) {
+      case "paye": return "Payé";
+      case "en_attente": return "En attente";
+      case "retard": return "En retard";
+      default: return "En attente";
+    }
+  };
+
+  const totalAmount = filteredRents.reduce((sum, rent) => sum + (rent.total_amount || 0), 0);
+  const paidAmount = filteredRents.filter(rent => rent.status === "paye").reduce((sum, rent) => sum + (rent.total_amount || 0), 0);
   const pendingAmount = totalAmount - paidAmount;
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Navigation />
+        <div className="container mx-auto px-4 pt-24 pb-12">
+          <div className="flex items-center justify-center h-64">
+            <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary"></div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -152,7 +211,7 @@ const Rents = () => {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Tous les statuts</SelectItem>
-              <SelectItem value="payé">Payé</SelectItem>
+              <SelectItem value="paye">Payé</SelectItem>
               <SelectItem value="en_attente">En attente</SelectItem>
               <SelectItem value="retard">En retard</SelectItem>
             </SelectContent>
@@ -167,51 +226,59 @@ const Rents = () => {
                   <div className="flex-1">
                     <div className="flex items-center space-x-3 mb-2">
                       {getStatusIcon(rent.status)}
-                      <h3 className="font-semibold text-lg">{rent.property}</h3>
+                      <h3 className="font-semibold text-lg">{rent.lease?.property?.title || 'Propriété inconnue'}</h3>
                       <Badge variant={getStatusVariant(rent.status)}>
-                        {rent.status}
+                        {getStatusLabel(rent.status)}
                       </Badge>
                     </div>
-                    <p className="text-muted-foreground mb-1">{rent.tenant}</p>
-                    <p className="text-sm text-muted-foreground">
-                      Période: {new Date(rent.month + "-01").toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })}
+                    <p className="text-muted-foreground mb-1">
+                      {rent.lease?.tenant ? `${rent.lease.tenant.first_name} ${rent.lease.tenant.last_name}` : 'Locataire inconnu'}
                     </p>
-                    {rent.status === "Retard" && rent.daysLate && (
+                    <p className="text-sm text-muted-foreground">
+                      Période: {new Date(rent.period_start).toLocaleDateString('fr-FR')} - {new Date(rent.period_end).toLocaleDateString('fr-FR')}
+                    </p>
+                    {rent.status === "retard" && (
                       <p className="text-sm text-destructive font-medium">
-                        Retard de {rent.daysLate} jours
+                        En retard depuis le {new Date(rent.due_date).toLocaleDateString('fr-FR')}
                       </p>
                     )}
                   </div>
                   
                   <div className="flex flex-col md:flex-row items-start md:items-center space-y-4 md:space-y-0 md:space-x-6">
                     <div className="text-right">
-                      <p className="text-2xl font-bold">{rent.amount}€</p>
+                      <p className="text-2xl font-bold">{rent.total_amount}€</p>
                       <p className="text-sm text-muted-foreground">
-                        Échéance: {new Date(rent.dueDate).toLocaleDateString('fr-FR')}
+                        Échéance: {new Date(rent.due_date).toLocaleDateString('fr-FR')}
                       </p>
-                      {rent.paidDate && (
+                      {rent.paid_date && (
                         <p className="text-sm text-success">
-                          Payé le {new Date(rent.paidDate).toLocaleDateString('fr-FR')}
+                          Payé le {new Date(rent.paid_date).toLocaleDateString('fr-FR')}
                         </p>
                       )}
                     </div>
                     
                     <div className="flex space-x-2">
-                      {rent.status === "Payé" && (
+                      {rent.status === "paye" && (
                         <Button variant="outline" size="sm">
                           <Download className="w-4 h-4 mr-1" />
                           Quittance
                         </Button>
                       )}
-                      {rent.status !== "Payé" && (
+                      {rent.status !== "paye" && (
                         <Button variant="outline" size="sm">
                           <Mail className="w-4 h-4 mr-1" />
                           Relancer
                         </Button>
                       )}
-                      <Button variant="default" size="sm">
-                        Marquer payé
-                      </Button>
+                      {rent.status !== "paye" && (
+                        <Button 
+                          variant="default" 
+                          size="sm"
+                          onClick={() => markAsPaid(rent.id)}
+                        >
+                          Marquer payé
+                        </Button>
+                      )}
                     </div>
                   </div>
                 </div>

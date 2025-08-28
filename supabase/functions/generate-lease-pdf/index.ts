@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
-import { DOMParser } from "https://deno.land/x/deno_dom@v0.1.38/deno-dom-wasm.ts";
+
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -170,18 +170,40 @@ function generateLeaseHTML(lease: any): string {
 }
 
 function generatePDFFromHTML(htmlContent: string): Uint8Array {
-  // Extraire les données importantes du HTML pour créer un PDF structuré
-  const parser = new DOMParser();
-  const doc = parser.parseFromString(htmlContent, "text/html");
-  
-  // Extraire le texte principal
-  const title = doc?.querySelector('h1')?.textContent || "CONTRAT DE LOCATION";
-  const subtitle = doc?.querySelector('h2')?.textContent || "";
-  const sections = Array.from(doc?.querySelectorAll('.section') || [])
-    .map(section => section.textContent?.trim() || "")
-    .filter(text => text.length > 0);
-  
+  const getTagText = (tag: string) => {
+    const match = new RegExp(`<${tag}[^>]*>([\\s\\S]*?)<\\/${tag}>`, 'i').exec(htmlContent);
+    return match ? stripHtmlEntities(match[1].trim()) : '';
+  };
+
+  const title = getTagText('h1') || 'CONTRAT DE LOCATION';
+  const subtitle = getTagText('h2') || '';
+
+  const sections: string[] = [];
+  const sectionRegex = /<div[^>]*class=["'][^"']*section[^"']*["'][^>]*>([\\s\\S]*?)<\\/div>/gi;
+  let m: RegExpExecArray | null;
+  while ((m = sectionRegex.exec(htmlContent)) !== null) {
+    const text = stripHtmlTags(m[1]);
+    const cleaned = text.replace(/\\s+/g, ' ').trim();
+    if (cleaned) sections.push(cleaned);
+  }
+
   return generateStructuredPDF(title, subtitle, sections);
+}
+
+function stripHtmlTags(input: string): string {
+  return stripHtmlEntities(input.replace(/<[^>]+>/g, ' '));
+}
+
+function stripHtmlEntities(input: string): string {
+  const entities: Record<string, string> = {
+    '&nbsp;': ' ',
+    '&amp;': '&',
+    '&lt;': '<',
+    '&gt;': '>',
+    '&quot;': '"',
+    '&#39;': "'",
+  };
+  return input.replace(/&[a-zA-Z#0-9]+;/g, (e) => entities[e] ?? ' ');
 }
 
 function generateStructuredPDF(title: string, subtitle: string, sections: string[]): Uint8Array {

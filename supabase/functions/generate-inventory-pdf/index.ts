@@ -177,17 +177,40 @@ function getConditionLabel(condition: string): string {
 }
 
 function generatePDFFromHTML(htmlContent: string): Uint8Array {
-  // Parse HTML to extract content
-  const parser = new DOMParser();
-  const doc = parser.parseFromString(htmlContent, 'text/html');
-  
-  const title = doc.querySelector('h1')?.textContent || 'ÉTAT DES LIEUX';
-  const subtitle = doc.querySelector('h2')?.textContent || '';
-  const sections = Array.from(doc.querySelectorAll('.section')).map(section => {
-    return section.textContent?.replace(/\s+/g, ' ').trim() || '';
-  });
+  const getTagText = (tag: string) => {
+    const match = new RegExp(`<${tag}[^>]*>([\\s\\S]*?)<\\/${tag}>`, 'i').exec(htmlContent);
+    return match ? stripHtmlEntities(match[1].trim()) : '';
+  };
+
+  const title = getTagText('h1') || 'ÉTAT DES LIEUX';
+  const subtitle = getTagText('h2') || '';
+
+  const sections: string[] = [];
+  const sectionRegex = /<div[^>]*class=["'][^"']*section[^"']*["'][^>]*>([\\s\\S]*?)<\\/div>/gi;
+  let m: RegExpExecArray | null;
+  while ((m = sectionRegex.exec(htmlContent)) !== null) {
+    const text = stripHtmlTags(m[1]);
+    const cleaned = text.replace(/\\s+/g, ' ').trim();
+    if (cleaned) sections.push(cleaned);
+  }
 
   return generateStructuredPDF(title, subtitle, sections);
+}
+
+function stripHtmlTags(input: string): string {
+  return stripHtmlEntities(input.replace(/<[^>]+>/g, ' '));
+}
+
+function stripHtmlEntities(input: string): string {
+  const entities: Record<string, string> = {
+    '&nbsp;': ' ',
+    '&amp;': '&',
+    '&lt;': '<',
+    '&gt;': '>',
+    '&quot;': '"',
+    '&#39;': "'",
+  };
+  return input.replace(/&[a-zA-Z#0-9]+;/g, (e) => entities[e] ?? ' ');
 }
 
 function generateStructuredPDF(title: string, subtitle: string, sections: string[]): Uint8Array {

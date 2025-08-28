@@ -13,6 +13,7 @@ import Leases from "./pages/Leases";
 import Rents from "./pages/Rents";
 import Tenants from "./pages/Tenants";
 import Documents from "./pages/Documents";
+import Inventories from "./pages/Inventories";
 import CautionRequests from "./pages/CautionRequests";
 import CautionInvitation from "./pages/CautionInvitation";
 import NotFound from "./pages/NotFound";
@@ -59,6 +60,11 @@ const App = () => (
             <Route path="/documents" element={
               <ProtectedRoute>
                 <Documents />
+              </ProtectedRoute>
+            } />
+            <Route path="/inventories" element={
+              <ProtectedRoute>
+                <Inventories />
               </ProtectedRoute>
             } />
             <Route path="/cautions" element={

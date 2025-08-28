@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Menu, X, Home, Users, FileText, DollarSign, Settings, LogOut, Shield } from "lucide-react";
+import { Menu, X, Home, Users, FileText, DollarSign, Settings, LogOut, Shield, ClipboardList } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useLocation } from "react-router-dom";
 
@@ -13,10 +13,11 @@ const Navigation = () => {
     { name: "Propriétés", href: "/properties", icon: Home },
     { name: "Locataires", href: "/tenants", icon: Users },
     { name: "Baux", href: "/leases", icon: FileText },
+    { name: "États des lieux", href: "/inventories", icon: ClipboardList },
     { name: "Loyers", href: "/rents", icon: DollarSign },
     { name: "Cautions", href: "/cautions", icon: Shield },
     { name: "Paramètres", href: "/settings", icon: Settings },
-]; 
+];
 
   const location = useLocation();
   console.log('Navigation: Current pathname:', location.pathname);

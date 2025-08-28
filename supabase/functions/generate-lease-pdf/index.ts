@@ -39,8 +39,13 @@ serve(async (req) => {
     // Générer le contenu HTML du bail
     const htmlContent = generateLeaseHTML(lease);
 
-    // Créer un PDF en utilisant une approche HTML-to-PDF
-    const pdfBuffer = await generatePDFFromHTML(htmlContent);
+    // Valider les données du bail avant génération
+    if (!validateLeaseData(lease)) {
+      throw new Error("Données du bail incomplètes ou invalides");
+    }
+
+    // Créer un PDF avec le contenu structuré
+    const pdfBuffer = generatePDFFromHTML(htmlContent);
 
     return new Response(pdfBuffer, {
       headers: {
@@ -61,6 +66,19 @@ serve(async (req) => {
     );
   }
 });
+
+function validateLeaseData(lease: any): boolean {
+  const required = [
+    lease.properties?.address,
+    lease.tenants?.first_name,
+    lease.tenants?.last_name,
+    lease.start_date,
+    lease.rent_amount,
+    lease.lease_type
+  ];
+  
+  return required.every(field => field !== null && field !== undefined && field !== '');
+}
 
 function generateLeaseHTML(lease: any): string {
   return `
@@ -151,47 +169,51 @@ function generateLeaseHTML(lease: any): string {
   `;
 }
 
-async function generatePDFFromHTML(htmlContent: string): Promise<Uint8Array> {
-  try {
-    // Utiliser une API externe pour convertir HTML en PDF
-    const response = await fetch('https://api.html-pdf-api.com/v1/generate', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        html: htmlContent,
-        format: 'A4',
-        printBackground: true,
-        margin: {
-          top: '1cm',
-          bottom: '1cm',
-          left: '1cm',
-          right: '1cm'
-        }
-      })
-    });
-
-    if (!response.ok) {
-      throw new Error('Erreur lors de la génération du PDF');
-    }
-
-    const arrayBuffer = await response.arrayBuffer();
-    return new Uint8Array(arrayBuffer);
-  } catch (error) {
-    console.error('Erreur génération PDF externe:', error);
-    // Fallback: générer un PDF simple avec le contenu texte
-    return generateFallbackPDF(htmlContent);
-  }
-}
-
-function generateFallbackPDF(htmlContent: string): Uint8Array {
-  // Extraire le texte du HTML pour le fallback
+function generatePDFFromHTML(htmlContent: string): Uint8Array {
+  // Extraire les données importantes du HTML pour créer un PDF structuré
   const parser = new DOMParser();
   const doc = parser.parseFromString(htmlContent, "text/html");
-  const textContent = doc?.body?.textContent || "Contrat de location";
   
+  // Extraire le texte principal
+  const title = doc?.querySelector('h1')?.textContent || "CONTRAT DE LOCATION";
+  const subtitle = doc?.querySelector('h2')?.textContent || "";
+  const sections = Array.from(doc?.querySelectorAll('.section') || [])
+    .map(section => section.textContent?.trim() || "")
+    .filter(text => text.length > 0);
+  
+  return generateStructuredPDF(title, subtitle, sections);
+}
+
+function generateStructuredPDF(title: string, subtitle: string, sections: string[]): Uint8Array {
   const pdfHeader = "%PDF-1.4\n";
+  
+  // Créer le contenu du PDF avec les données structurées
+  let content = `BT
+/F1 16 Tf
+50 750 Td
+(${title.replace(/[()\\]/g, '')}) Tj
+0 -30 Td
+/F1 12 Tf
+(${subtitle.replace(/[()\\]/g, '')}) Tj
+0 -40 Td
+`;
+
+  let yPos = 680;
+  sections.forEach((section, index) => {
+    if (yPos < 100) return; // Éviter le débordement de page
+    
+    const cleanSection = section.replace(/[()\\]/g, '').substring(0, 200);
+    content += `/F1 10 Tf
+0 ${yPos - 750} Td
+(${cleanSection}) Tj
+`;
+    yPos -= 60;
+  });
+
+  content += `ET`;
+
+  const contentLength = content.length;
+
   const pdfContent = `1 0 obj
 <<
 /Type /Catalog
@@ -227,16 +249,10 @@ endobj
 
 4 0 obj
 <<
-/Length 200
+/Length ${contentLength}
 >>
 stream
-BT
-/F1 12 Tf
-50 750 Td
-(CONTRAT DE LOCATION) Tj
-0 -20 Td
-(${textContent.substring(0, 500).replace(/[()\\]/g, '')}) Tj
-ET
+${content}
 endstream
 endobj
 

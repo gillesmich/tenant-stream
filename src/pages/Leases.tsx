@@ -73,11 +73,18 @@ const Leases = () => {
 
   const generatePDF = async (leaseId: string) => {
     try {
-      toast({
-        title: "Génération du PDF",
-        description: "Le PDF du bail est en cours de génération...",
-      });
-      
+      // Open a preview tab immediately to avoid popup blockers and show progress
+      const preview = window.open('', '_blank');
+      if (!preview) {
+        toast({
+          title: "Popup bloquée",
+          description: "Autorisez les pop-ups pour prévisualiser le PDF",
+          variant: "destructive",
+        });
+        return;
+      }
+      preview.document.write('<!doctype html><title>Génération du PDF…</title><body style="font-family:sans-serif;padding:16px"><p>Génération du PDF du bail…</p><p>Veuillez patienter.</p></body>');
+
       const { data: sessionData } = await supabase.auth.getSession();
       const token = sessionData?.session?.access_token || '';
 
@@ -87,6 +94,7 @@ const Leases = () => {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
+            'Accept': 'application/pdf',
             'Authorization': token ? `Bearer ${token}` : '',
           },
           body: JSON.stringify({ leaseId }),
@@ -95,21 +103,17 @@ const Leases = () => {
 
       if (!res.ok) throw new Error('Failed to generate PDF');
 
-      // Créer et télécharger le PDF
       const buffer = await res.arrayBuffer();
       const blob = new Blob([buffer], { type: 'application/pdf' });
       const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `bail-${leaseId}.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
+
+      // Display in the opened tab
+      preview.location.replace(url);
+      preview.addEventListener('beforeunload', () => window.URL.revokeObjectURL(url));
     } catch (error: any) {
       toast({
         title: "Erreur",
-        description: "Impossible de générer le PDF",
+        description: "Impossible d'ouvrir le PDF",
         variant: "destructive",
       });
     }

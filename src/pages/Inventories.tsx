@@ -84,28 +84,36 @@ export default function Inventories() {
 
   const generatePDF = async (inventoryId: string) => {
     try {
-      const { data, error } = await supabase.functions.invoke('generate-inventory-pdf', {
-        body: { inventoryId }
-      });
-
-      if (error) {
-        console.error('PDF generation error:', error);
-        toast.error('Erreur lors de la génération du PDF');
+      const preview = window.open('', '_blank');
+      if (!preview) {
+        toast.error('Popup bloquée: autorisez les pop-ups pour prévisualiser le PDF');
         return;
       }
+      preview.document.write('<!doctype html><title>Génération du PDF…</title><body style="font-family:sans-serif;padding:16px"><p>Génération du PDF de l\'état des lieux…</p><p>Veuillez patienter.</p></body>');
 
-      // Create download link
-      const blob = new Blob([data], { type: 'application/pdf' });
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData?.session?.access_token || '';
+
+      const res = await fetch(
+        'https://vbpyykdkaoktzuewbzzl.supabase.co/functions/v1/generate-inventory-pdf',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/pdf',
+            'Authorization': token ? `Bearer ${token}` : '',
+          },
+          body: JSON.stringify({ inventoryId }),
+        }
+      );
+
+      if (!res.ok) throw new Error('Failed to generate PDF');
+
+      const buffer = await res.arrayBuffer();
+      const blob = new Blob([buffer], { type: 'application/pdf' });
       const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `etat-des-lieux-${inventoryId}.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
-      
-      toast.success('PDF téléchargé avec succès');
+      preview.location.replace(url);
+      preview.addEventListener('beforeunload', () => window.URL.revokeObjectURL(url));
     } catch (error) {
       console.error('Error:', error);
       toast.error('Erreur lors de la génération du PDF');

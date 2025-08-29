@@ -208,36 +208,72 @@ function stripHtmlEntities(input: string): string {
 
 function generateStructuredPDF(title: string, subtitle: string, sections: string[]): Uint8Array {
   const sanitize = (s: string) => s.replace(/[\r\n]+/g, ' ').replace(/[()\\]/g, '');
+  
+  // Fonction pour diviser le texte en lignes de longueur appropriée
+  const wrapText = (text: string, maxLength: number = 80): string[] => {
+    const words = text.split(' ');
+    const lines: string[] = [];
+    let currentLine = '';
+    
+    for (const word of words) {
+      if ((currentLine + ' ' + word).length <= maxLength) {
+        currentLine = currentLine ? currentLine + ' ' + word : word;
+      } else {
+        if (currentLine) lines.push(currentLine);
+        currentLine = word;
+      }
+    }
+    if (currentLine) lines.push(currentLine);
+    return lines;
+  };
 
-  // Build the text content stream
-  let yPos = 760; // start near top of page (height 792)
+  // Build the text content stream with proper formatting
   const lines: string[] = [];
   lines.push('BT');
-  lines.push('/F1 18 Tf');
-  lines.push(`50 ${yPos} Td`);
+  lines.push('/F1 16 Tf'); // Titre principal plus grand
+  lines.push('50 750 Td');
   lines.push(`(${sanitize(title)}) Tj`);
 
   if (subtitle) {
-    lines.push('0 -28 Td');
+    lines.push('0 -24 Td');
     lines.push('/F1 12 Tf');
     lines.push(`(${sanitize(subtitle)}) Tj`);
   }
 
+  lines.push('0 -40 Td'); // Espace après le titre
   lines.push('/F1 10 Tf');
-  let currentY = 704; // move down below headings
-  let lastY = yPos - 28 - 28; // approximate last Y used
 
-  sections.forEach((section) => {
-    if (currentY < 100) return; // simple single-page guard
-    const text = sanitize(section).substring(0, 500);
-
-    // Move down relative to previous line
-    const deltaY = currentY - lastY;
-    lines.push(`0 ${deltaY} Td`); // relative vertical move
-    lines.push(`(${text}) Tj`);
-
-    lastY = currentY;
-    currentY -= 60;
+  sections.forEach((section, index) => {
+    if (index > 0) {
+      lines.push('0 -20 Td'); // Espace entre les sections
+    }
+    
+    // Extraire le titre de section s'il y en a un
+    const titleMatch = section.match(/^([A-ZÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÐÑÒÓÔÕÖ\s]+):/);
+    if (titleMatch) {
+      const sectionTitle = titleMatch[1];
+      const sectionContent = section.substring(titleMatch[0].length).trim();
+      
+      // Titre de section en gras
+      lines.push('/F1 11 Tf');
+      lines.push(`(${sanitize(sectionTitle)}:) Tj`);
+      lines.push('0 -16 Td');
+      lines.push('/F1 9 Tf');
+      
+      // Contenu de la section avec retour à la ligne approprié
+      const wrappedLines = wrapText(sanitize(sectionContent), 70);
+      wrappedLines.forEach((line, lineIndex) => {
+        if (lineIndex > 0) lines.push('0 -12 Td');
+        lines.push(`(${line}) Tj`);
+      });
+    } else {
+      // Section sans titre spécifique
+      const wrappedLines = wrapText(sanitize(section), 70);
+      wrappedLines.forEach((line, lineIndex) => {
+        if (lineIndex > 0) lines.push('0 -12 Td');
+        lines.push(`(${line}) Tj`);
+      });
+    }
   });
 
   lines.push('ET');

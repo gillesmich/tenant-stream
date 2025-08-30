@@ -73,6 +73,35 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   useEffect(() => {
     console.log('Setting up auth state listener');
+    
+    // Clean up any corrupted auth state first
+    const cleanupCorruptedState = () => {
+      try {
+        const keys = Object.keys(localStorage).filter(key => 
+          key.startsWith('supabase.auth.') || key.includes('sb-')
+        );
+        console.log('Found auth keys:', keys);
+        
+        // Check if we have corrupted tokens
+        keys.forEach(key => {
+          try {
+            const value = localStorage.getItem(key);
+            if (value && value.includes('error') || value === 'null') {
+              console.log('Removing corrupted key:', key);
+              localStorage.removeItem(key);
+            }
+          } catch (e) {
+            console.log('Removing invalid key:', key);
+            localStorage.removeItem(key);
+          }
+        });
+      } catch (error) {
+        console.error('Error cleaning up auth state:', error);
+      }
+    };
+    
+    cleanupCorruptedState();
+
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
@@ -95,7 +124,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     );
 
     // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(({ data: { session }, error }) => {
+      if (error) {
+        console.error('Error getting session:', error);
+        cleanupCorruptedState();
+        setLoading(false);
+        return;
+      }
+      
       console.log('Initial session:', session?.user?.id);
       setSession(session);
       setUser(session?.user ?? null);
@@ -112,10 +148,20 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const signOut = async () => {
     try {
-      await supabase.auth.signOut();
+      // Clean up auth state first
+      localStorage.removeItem('supabase.auth.token');
+      Object.keys(localStorage).forEach((key) => {
+        if (key.startsWith('supabase.auth.') || key.includes('sb-')) {
+          localStorage.removeItem(key);
+        }
+      });
+      
+      await supabase.auth.signOut({ scope: 'global' });
       window.location.href = "/auth";
     } catch (error) {
       console.error("Error signing out:", error);
+      // Force cleanup even if signOut fails
+      window.location.href = "/auth";
     }
   };
 

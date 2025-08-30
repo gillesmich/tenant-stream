@@ -54,6 +54,27 @@ const Auth = () => {
     setLoading(true);
 
     try {
+      // Clean up any existing corrupted auth state first
+      Object.keys(localStorage).forEach((key) => {
+        if (key.startsWith('supabase.auth.') || key.includes('sb-')) {
+          try {
+            const value = localStorage.getItem(key);
+            if (value && (value.includes('error') || value === 'null')) {
+              localStorage.removeItem(key);
+            }
+          } catch (e) {
+            localStorage.removeItem(key);
+          }
+        }
+      });
+
+      // Attempt global sign out first to clean any existing session
+      try {
+        await supabase.auth.signOut({ scope: 'global' });
+      } catch (err) {
+        // Continue even if this fails
+      }
+
       const { data, error } = await supabase.auth.signInWithPassword({
         email: loginForm.email,
         password: loginForm.password,
@@ -66,12 +87,15 @@ const Auth = () => {
           title: "Connexion réussie",
           description: "Bienvenue dans LocaManager",
         });
-        setIsAuthenticated(true);
+        // Force a full page reload to ensure clean state
+        window.location.href = '/';
       }
     } catch (error: any) {
       toast({
         title: "Erreur de connexion",
-        description: error.message,
+        description: error.message === "Invalid login credentials" 
+          ? "Email ou mot de passe incorrect" 
+          : error.message,
         variant: "destructive",
       });
     } finally {
@@ -84,11 +108,25 @@ const Auth = () => {
     setLoading(true);
 
     try {
+      // Clean up any existing corrupted auth state first
+      Object.keys(localStorage).forEach((key) => {
+        if (key.startsWith('supabase.auth.') || key.includes('sb-')) {
+          try {
+            const value = localStorage.getItem(key);
+            if (value && (value.includes('error') || value === 'null')) {
+              localStorage.removeItem(key);
+            }
+          } catch (e) {
+            localStorage.removeItem(key);
+          }
+        }
+      });
+
       const { data, error } = await supabase.auth.signUp({
         email: signupForm.email,
         password: signupForm.password,
         options: {
-          emailRedirectTo: `${window.location.origin}/dashboard`,
+          emailRedirectTo: `${window.location.origin}/`,
           data: {
             first_name: signupForm.firstName,
             last_name: signupForm.lastName,
@@ -101,15 +139,26 @@ const Auth = () => {
 
       if (error) throw error;
 
-      toast({
-        title: "Inscription réussie",
-        description: "Vérifiez votre email pour confirmer votre compte",
-      });
+      if (data.user && !data.user.email_confirmed_at) {
+        toast({
+          title: "Inscription réussie",
+          description: "Vérifiez votre email pour confirmer votre compte",
+        });
+      } else if (data.user) {
+        // User already exists and is confirmed
+        toast({
+          title: "Connexion automatique",
+          description: "Vous êtes maintenant connecté",
+        });
+        window.location.href = '/';
+      }
       
     } catch (error: any) {
       toast({
         title: "Erreur d'inscription",
-        description: error.message,
+        description: error.message === "User already registered"
+          ? "Cet email est déjà utilisé. Essayez de vous connecter."
+          : error.message,
         variant: "destructive",
       });
     } finally {

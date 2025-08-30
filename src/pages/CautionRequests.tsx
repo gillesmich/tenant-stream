@@ -44,13 +44,24 @@ const CautionRequests = () => {
     if (!user) return;
     try {
       setSendingId(id);
+      console.log('Sending invitation for caution request:', id);
       const { data, error } = await supabase.functions.invoke('send-caution-invitation', {
         body: { cautionRequestId: id }
       });
+      console.log('Edge function response:', { data, error });
       if (error) throw error;
-      toast({ title: "Invitation envoyée", description: "Le locataire a été invité par email." });
+      
+      // Also copy invitation link to clipboard
+      const invitationLink = `${window.location.origin}/caution-invitation/${id}`;
+      navigator.clipboard.writeText(invitationLink);
+      
+      toast({ 
+        title: "Invitation envoyée", 
+        description: "Le locataire a été invité par email. Le lien d'invitation a été copié dans le presse-papiers."
+      });
       await loadCautionRequests();
     } catch (error: any) {
+      console.error('Error sending invitation:', error);
       toast({ title: "Erreur", description: error.message || "Impossible d'envoyer l'invitation", variant: "destructive" });
     } finally {
       setSendingId(null);

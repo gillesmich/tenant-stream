@@ -16,6 +16,7 @@ import Documents from "./pages/Documents";
 import Inventories from "./pages/Inventories";
 import CautionRequests from "./pages/CautionRequests";
 import CautionInvitation from "./pages/CautionInvitation";
+import TenantCautionRequests from "./pages/TenantCautionRequests";
 import TenantDashboard from "./pages/TenantDashboard";
 import NotFound from "./pages/NotFound";
 import { CommandPalette } from "./components/CommandPalette";
@@ -86,6 +87,11 @@ const App = () => (
             <Route path="/tenant/payments" element={
               <ProtectedRoute>
                 <Rents />
+              </ProtectedRoute>
+            } />
+            <Route path="/tenant/cautions" element={
+              <ProtectedRoute>
+                <TenantCautionRequests />
               </ProtectedRoute>
             } />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

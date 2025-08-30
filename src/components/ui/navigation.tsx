@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Menu, X, Home, Users, FileText, DollarSign, Settings, LogOut, Shield, ClipboardList } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
-import { useLocation } from "react-router-dom";
+import { useLocation, Link } from "react-router-dom";
 
 const Navigation = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -40,14 +40,14 @@ const Navigation = () => {
             
             <div className="hidden md:flex space-x-6">
               {navItems.map((item) => (
-                <a
+                <Link
                   key={item.name}
-                  href={item.href}
+                  to={item.href}
                   className="flex items-center space-x-1 text-muted-foreground hover:text-foreground transition-colors"
                 >
                   <item.icon className="w-4 h-4" />
                   <span>{item.name}</span>
-                </a>
+                </Link>
               ))}
             </div>
           </div>
@@ -78,14 +78,14 @@ const Navigation = () => {
           <div className="md:hidden py-4 border-t border-border">
             <div className="flex flex-col space-y-4">
               {navItems.map((item) => (
-                <a
+                <Link
                   key={item.name}
-                  href={item.href}
+                  to={item.href}
                   className="flex items-center space-x-2 text-muted-foreground hover:text-foreground transition-colors"
                 >
                   <item.icon className="w-4 h-4" />
                   <span>{item.name}</span>
-                </a>
+                </Link>
               ))}
               <div className="flex flex-col space-y-2 pt-4">
                 <span className="text-sm text-muted-foreground px-3">

@@ -332,7 +332,26 @@ const TenantDashboard = () => {
         </div>
 
         {/* Quick Actions */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <Card className="shadow-card hover:shadow-elegant transition-all duration-300">
+            <CardHeader>
+              <CardTitle className="flex items-center">
+                <Shield className="w-5 h-5 mr-2 text-primary" />
+                Mes cautions
+              </CardTitle>
+              <CardDescription>
+                Voir toutes mes demandes de caution
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Button asChild className="w-full">
+                <Link to="/tenant/cautions">
+                  Voir mes cautions
+                </Link>
+              </Button>
+            </CardContent>
+          </Card>
+
           <Card className="shadow-card hover:shadow-elegant transition-all duration-300">
             <CardHeader>
               <CardTitle className="flex items-center">

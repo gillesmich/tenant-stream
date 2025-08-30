@@ -16,6 +16,7 @@ import Documents from "./pages/Documents";
 import Inventories from "./pages/Inventories";
 import CautionRequests from "./pages/CautionRequests";
 import CautionInvitation from "./pages/CautionInvitation";
+import TenantDashboard from "./pages/TenantDashboard";
 import NotFound from "./pages/NotFound";
 import { CommandPalette } from "./components/CommandPalette";
 
@@ -77,6 +78,11 @@ const App = () => (
               </ProtectedRoute>
             } />
             <Route path="/caution-invitation/:id" element={<CautionInvitation />} />
+            <Route path="/tenant-dashboard" element={
+              <ProtectedRoute>
+                <TenantDashboard />
+              </ProtectedRoute>
+            } />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

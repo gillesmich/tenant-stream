@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Navigation from "@/components/ui/navigation";
-import { FileText, Home, Calendar, Euro, Download, PenTool, Clock } from "lucide-react";
+import { FileText, Home, Calendar, Euro, Download, PenTool, Clock, Shield, CheckCircle, AlertCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
 const TenantDashboard = () => {
@@ -12,6 +12,7 @@ const TenantDashboard = () => {
   const [documents, setDocuments] = useState<any[]>([]);
   const [lease, setLease] = useState<any>(null);
   const [property, setProperty] = useState<any>(null);
+  const [cautionRequests, setCautionRequests] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   const loadTenantData = async () => {
@@ -44,6 +45,25 @@ const TenantDashboard = () => {
       if (docsError) throw docsError;
 
       setDocuments(docsData || []);
+
+      // Load caution requests for this tenant's email
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('email')
+        .eq('user_id', user.id)
+        .single();
+
+      if (profileData?.email) {
+        const { data: cautionData, error: cautionError } = await supabase
+          .from('caution_requests')
+          .select('*')
+          .eq('tenant_email', profileData.email)
+          .order('created_at', { ascending: false });
+
+        if (!cautionError) {
+          setCautionRequests(cautionData || []);
+        }
+      }
     } catch (error) {
       console.error('Error loading tenant data:', error);
     } finally {
@@ -145,6 +165,90 @@ const TenantDashboard = () => {
             </Card>
           </div>
         )}
+
+        {/* Caution Requests Section */}
+        <div className="mb-8">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-2xl font-bold">Mes demandes de caution</h2>
+          </div>
+
+          {cautionRequests.length === 0 ? (
+            <Card className="shadow-card">
+              <CardContent className="text-center py-12">
+                <Shield className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                <h3 className="text-lg font-semibold mb-2">Aucune demande de caution</h3>
+                <p className="text-muted-foreground">
+                  Vos demandes de caution apparaîtront ici lorsque vous en recevrez.
+                </p>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {cautionRequests.map((request) => (
+                <Card key={request.id} className="shadow-card hover:shadow-elegant transition-all duration-300">
+                  <CardHeader>
+                    <CardTitle className="flex items-center justify-between">
+                      <span className="flex items-center">
+                        <Shield className="w-4 h-4 mr-2" />
+                        Caution locative
+                      </span>
+                      {request.status === 'pending' ? (
+                        <Badge variant="secondary">
+                          <Clock className="w-3 h-3 mr-1" />
+                          En attente
+                        </Badge>
+                      ) : request.status === 'accepted' ? (
+                        <Badge variant="default" className="bg-success text-success-foreground">
+                          <CheckCircle className="w-3 h-3 mr-1" />
+                          Acceptée
+                        </Badge>
+                      ) : request.status === 'invited' ? (
+                        <Badge variant="outline">
+                          <AlertCircle className="w-3 h-3 mr-1" />
+                          Invité
+                        </Badge>
+                      ) : null}
+                    </CardTitle>
+                    <CardDescription>
+                      {request.property_address}
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      <div className="grid grid-cols-2 gap-4 text-sm">
+                        <div>
+                          <p className="font-medium text-muted-foreground">Montant</p>
+                          <p className="font-semibold">{(request.amount / 100).toLocaleString('fr-FR')} €</p>
+                        </div>
+                        <div>
+                          <p className="font-medium text-muted-foreground">Durée</p>
+                          <p className="font-semibold">{request.duration_months} mois</p>
+                        </div>
+                      </div>
+                      
+                      <div className="text-sm text-muted-foreground">
+                        <p>Créée le {new Date(request.created_at).toLocaleDateString('fr-FR')}</p>
+                        <p>Expire le {new Date(request.expires_at).toLocaleDateString('fr-FR')}</p>
+                      </div>
+                      
+                      {request.status === 'pending' && (
+                        <Button 
+                          size="sm" 
+                          className="w-full"
+                          asChild
+                        >
+                          <a href={`/caution-invitation/${request.id}`}>
+                            Voir l'invitation
+                          </a>
+                        </Button>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </div>
 
         {/* Documents Section */}
         <div className="mb-8">

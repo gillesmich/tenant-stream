@@ -38,6 +38,25 @@ const CautionRequests = () => {
     property_address: "",
   });
 
+  const [sendingId, setSendingId] = useState<string | null>(null);
+  
+  const sendInvitation = async (id: string) => {
+    if (!user) return;
+    try {
+      setSendingId(id);
+      const { data, error } = await supabase.functions.invoke('send-caution-invitation', {
+        body: { cautionRequestId: id }
+      });
+      if (error) throw error;
+      toast({ title: "Invitation envoyée", description: "Le locataire a été invité par email." });
+      await loadCautionRequests();
+    } catch (error: any) {
+      toast({ title: "Erreur", description: error.message || "Impossible d'envoyer l'invitation", variant: "destructive" });
+    } finally {
+      setSendingId(null);
+    }
+  };
+
   useEffect(() => {
     if (user) {
       loadCautionRequests();
@@ -268,7 +287,19 @@ const CautionRequests = () => {
                           {request.property_address}
                         </CardDescription>
                       </div>
-                      {getStatusBadge(request.status)}
+                      <div className="flex items-center gap-2">
+                        {getStatusBadge(request.status)}
+                        {request.status !== 'invited' && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => sendInvitation(request.id)}
+                            disabled={sendingId === request.id}
+                          >
+                            {sendingId === request.id ? 'Envoi...' : 'Envoyer invitation'}
+                          </Button>
+                        )}
+                      </div>
                     </div>
                   </CardHeader>
                   <CardContent>

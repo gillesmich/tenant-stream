@@ -117,6 +117,29 @@ const CautionInvitation = () => {
     setStep("profile");
   };
 
+  const handleRejectInvitation = async () => {
+    if (!user || !cautionRequest) return;
+
+    try {
+      await supabase
+        .from("caution_requests")
+        .update({ status: "rejected" })
+        .eq("id", cautionRequest.id);
+
+      toast({
+        title: "Invitation refusée",
+        description: "Vous avez refusé l'invitation de caution",
+      });
+      navigate("/");
+    } catch (error: any) {
+      toast({
+        title: "Erreur",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
+
   const handleProfileSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user || !cautionRequest) return;
@@ -242,7 +265,7 @@ const CautionInvitation = () => {
                 <Button onClick={handleAcceptInvitation} className="flex-1">
                   Accepter l'invitation
                 </Button>
-                <Button variant="outline" onClick={() => navigate("/")} className="flex-1">
+                <Button variant="outline" onClick={handleRejectInvitation} className="flex-1">
                   Refuser
                 </Button>
               </div>

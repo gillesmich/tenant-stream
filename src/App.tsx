@@ -30,7 +30,11 @@ const App = () => (
         <BrowserRouter>
           <CommandPalette />
           <Routes>
-            <Route path="/" element={<Home />} />
+            <Route path="/" element={
+              <ProtectedRoute>
+                <Index />
+              </ProtectedRoute>
+            } />
             <Route path="/auth" element={<Auth />} />
             <Route path="/dashboard" element={
               <ProtectedRoute>

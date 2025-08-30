@@ -9,7 +9,7 @@ const Navigation = () => {
   const { signOut, user } = useAuth();
 
   const navItems = [
-    { name: "Accueil", href: "/", icon: Home },
+    { name: "Dashboard", href: "/", icon: Home },
     { name: "Propriétés", href: "/properties", icon: Home },
     { name: "Locataires", href: "/tenants", icon: Users },
     { name: "Baux", href: "/leases", icon: FileText },

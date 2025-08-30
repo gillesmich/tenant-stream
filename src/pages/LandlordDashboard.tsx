@@ -19,43 +19,66 @@ const LandlordDashboard = () => {
   const [loading, setLoading] = useState(true);
 
   const loadDashboardStats = async () => {
-    if (!user) return;
+    if (!user) {
+      console.log('❌ No user found, cannot load stats');
+      return;
+    }
+
+    console.log('🔍 Loading dashboard stats for user:', user.id);
 
     try {
       // Load properties stats
+      console.log('📊 Fetching properties...');
       const { data: properties, error: propertiesError } = await supabase
         .from('properties')
         .select('status')
         .eq('owner_id', user.id);
 
-      if (propertiesError) throw propertiesError;
+      if (propertiesError) {
+        console.error('❌ Properties error:', propertiesError);
+        throw propertiesError;
+      }
+      console.log('✅ Properties loaded:', properties?.length || 0, properties);
 
       // Load leases stats
+      console.log('📊 Fetching leases...');
       const { data: leases, error: leasesError } = await supabase
         .from('leases')
         .select('status')
         .eq('owner_id', user.id);
 
-      if (leasesError) throw leasesError;
+      if (leasesError) {
+        console.error('❌ Leases error:', leasesError);
+        throw leasesError;
+      }
+      console.log('✅ Leases loaded:', leases?.length || 0, leases);
 
       // Load rents stats
+      console.log('📊 Fetching rents...');
       const { data: rents, error: rentsError } = await supabase
         .from('rents')
         .select('status, total_amount')
         .eq('owner_id', user.id);
 
-      if (rentsError) throw rentsError;
+      if (rentsError) {
+        console.error('❌ Rents error:', rentsError);
+        throw rentsError;
+      }
+      console.log('✅ Rents loaded:', rents?.length || 0, rents);
 
-      setStats({
+      const newStats = {
         totalProperties: properties?.length || 0,
         availableProperties: properties?.filter(p => p.status === 'disponible').length || 0,
         activeLeases: leases?.filter(l => l.status === 'actif').length || 0,
         totalRents: rents?.length || 0,
         paidRents: rents?.filter(r => r.status === 'paye').length || 0,
         overdueRents: rents?.filter(r => r.status === 'en_retard').length || 0
-      });
+      };
+
+      console.log('📈 Final stats:', newStats);
+      setStats(newStats);
     } catch (error) {
-      console.error('Error loading dashboard stats:', error);
+      console.error('💥 Error loading dashboard stats:', error);
     } finally {
       setLoading(false);
     }

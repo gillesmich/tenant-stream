@@ -38,6 +38,15 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const loadUserProfile = async (userId: string) => {
     try {
       console.log('Loading user profile for:', userId);
+      
+      // Test connection first
+      const { data: testData, error: testError } = await supabase
+        .from('profiles')
+        .select('count(*)')
+        .limit(1);
+      
+      console.log('Connection test result:', { testData, testError });
+      
       const { data: profile, error } = await supabase
         .from('profiles')
         .select('*')
@@ -46,12 +55,17 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
       if (error) {
         console.error('Error loading user profile:', error);
-        throw error;
+        // If profile doesn't exist, this might be a new user
+        if (error.code === 'PGRST116') {
+          console.log('No profile found for user, this might be a new user');
+          setUserRole('proprietaire'); // Default role
+        }
+        return;
       }
       
       console.log('Loaded profile:', profile);
       setUserProfile(profile);
-      setUserRole(profile?.user_type || null);
+      setUserRole(profile?.user_type || 'proprietaire');
     } catch (error) {
       console.error('Error loading user profile:', error);
     }

@@ -149,25 +149,43 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const signOut = async () => {
     try {
       console.log('Starting logout process...');
-      
-      // Clean up auth state first
-      localStorage.removeItem('supabase.auth.token');
-      Object.keys(localStorage).forEach((key) => {
-        if (key.startsWith('supabase.auth.') || key.includes('sb-')) {
-          console.log('Removing localStorage key:', key);
-          localStorage.removeItem(key);
+
+      // Clean up auth state first (localStorage + sessionStorage)
+      try {
+        localStorage.removeItem('supabase.auth.token');
+        Object.keys(localStorage).forEach((key) => {
+          if (key.startsWith('supabase.auth.') || key.includes('sb-')) {
+            console.log('Removing localStorage key:', key);
+            localStorage.removeItem(key);
+          }
+        });
+        if (typeof sessionStorage !== 'undefined') {
+          Object.keys(sessionStorage).forEach((key) => {
+            if (key.startsWith('supabase.auth.') || key.includes('sb-')) {
+              console.log('Removing sessionStorage key:', key);
+              sessionStorage.removeItem(key);
+            }
+          });
         }
-      });
-      
+      } catch (e) {
+        console.warn('Error while cleaning storage during logout', e);
+      }
+
+      // Optimistically clear in-memory auth state
+      setUser(null);
+      setSession(null);
+      setUserProfile(null);
+      setUserRole(null);
+
       console.log('Calling Supabase signOut...');
       const { error } = await supabase.auth.signOut({ scope: 'global' });
-      
+
       if (error) {
         console.error('Supabase signOut error:', error);
       } else {
         console.log('Supabase signOut successful');
       }
-      
+
       console.log('Redirecting to /auth...');
       window.location.href = "/auth";
     } catch (error) {

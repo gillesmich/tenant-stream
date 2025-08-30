@@ -54,7 +54,7 @@ const Auth = () => {
     setLoading(true);
 
     try {
-      // Clean up any existing corrupted auth state first
+      // Clean up any existing corrupted auth state first (localStorage + sessionStorage)
       Object.keys(localStorage).forEach((key) => {
         if (key.startsWith('supabase.auth.') || key.includes('sb-')) {
           try {
@@ -67,6 +67,13 @@ const Auth = () => {
           }
         }
       });
+      if (typeof sessionStorage !== 'undefined') {
+        Object.keys(sessionStorage).forEach((key) => {
+          if (key.startsWith('supabase.auth.') || key.includes('sb-')) {
+            sessionStorage.removeItem(key);
+          }
+        });
+      }
 
       // Attempt global sign out first to clean any existing session
       try {
@@ -108,7 +115,7 @@ const Auth = () => {
     setLoading(true);
 
     try {
-      // Clean up any existing corrupted auth state first
+      // Clean up any existing corrupted auth state first (localStorage + sessionStorage)
       Object.keys(localStorage).forEach((key) => {
         if (key.startsWith('supabase.auth.') || key.includes('sb-')) {
           try {
@@ -121,6 +128,13 @@ const Auth = () => {
           }
         }
       });
+      if (typeof sessionStorage !== 'undefined') {
+        Object.keys(sessionStorage).forEach((key) => {
+          if (key.startsWith('supabase.auth.') || key.includes('sb-')) {
+            sessionStorage.removeItem(key);
+          }
+        });
+      }
 
       const { data, error } = await supabase.auth.signUp({
         email: signupForm.email,

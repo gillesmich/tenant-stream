@@ -148,19 +148,32 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const signOut = async () => {
     try {
+      console.log('Starting logout process...');
+      
       // Clean up auth state first
       localStorage.removeItem('supabase.auth.token');
       Object.keys(localStorage).forEach((key) => {
         if (key.startsWith('supabase.auth.') || key.includes('sb-')) {
+          console.log('Removing localStorage key:', key);
           localStorage.removeItem(key);
         }
       });
       
-      await supabase.auth.signOut({ scope: 'global' });
+      console.log('Calling Supabase signOut...');
+      const { error } = await supabase.auth.signOut({ scope: 'global' });
+      
+      if (error) {
+        console.error('Supabase signOut error:', error);
+      } else {
+        console.log('Supabase signOut successful');
+      }
+      
+      console.log('Redirecting to /auth...');
       window.location.href = "/auth";
     } catch (error) {
       console.error("Error signing out:", error);
       // Force cleanup even if signOut fails
+      console.log('Force redirecting to /auth due to error...');
       window.location.href = "/auth";
     }
   };

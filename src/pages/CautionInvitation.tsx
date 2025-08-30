@@ -121,10 +121,10 @@ const CautionInvitation = () => {
     if (!user || !cautionRequest) return;
 
     try {
-      await supabase
-        .from("caution_requests")
-        .update({ status: "rejected" })
-        .eq("id", cautionRequest.id);
+      const { data, error } = await supabase.functions.invoke('respond-caution-invitation', {
+        body: { cautionRequestId: cautionRequest.id, action: 'reject' }
+      });
+      if (error) throw error;
 
       toast({
         title: "Invitation refusée",
@@ -153,11 +153,11 @@ const CautionInvitation = () => {
 
       if (error) throw error;
 
-      // Update caution request status
-      await supabase
-        .from("caution_requests")
-        .update({ status: "accepted" })
-        .eq("id", cautionRequest.id);
+      // Update caution request status via Edge Function
+      const { error: statusError } = await supabase.functions.invoke('respond-caution-invitation', {
+        body: { cautionRequestId: cautionRequest.id, action: 'accept' }
+      });
+      if (statusError) throw statusError;
 
       toast({
         title: "Profil créé",

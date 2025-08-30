@@ -49,3 +49,6 @@ ip_version = "ipv4"
 
 [functions.send-caution-invitation]
 verify_jwt = false
+
+[functions.respond-caution-invitation]
+verify_jwt = true

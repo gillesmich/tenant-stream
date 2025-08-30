@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import Navigation from "@/components/ui/navigation";
 import { FileText, Home, Calendar, Euro, Download, PenTool, Clock, Shield, CheckCircle, AlertCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Link } from "react-router-dom";
 
 const TenantDashboard = () => {
   const { user } = useAuth();
@@ -237,9 +238,9 @@ const TenantDashboard = () => {
                           className="w-full"
                           asChild
                         >
-                          <a href={`/caution-invitation/${request.id}`}>
+                          <Link to={`/caution-invitation/${request.id}`}>
                             Voir l'invitation
-                          </a>
+                          </Link>
                         </Button>
                       )}
                     </div>
@@ -344,9 +345,9 @@ const TenantDashboard = () => {
             </CardHeader>
             <CardContent>
               <Button asChild className="w-full">
-                <a href="/tenant/payments">
+                <Link to="/tenant/payments">
                   Voir mes paiements
-                </a>
+                </Link>
               </Button>
             </CardContent>
           </Card>

@@ -34,7 +34,8 @@ export const PDFTemplateManager = ({ onTemplateSelect, selectedTemplate }: PDFTe
       const { data, error } = await supabase
         .from('documents')
         .select('*')
-        .eq('document_type', 'lease_template')
+        .eq('document_type', 'autre')
+        .ilike('title', '%template%')
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -82,7 +83,7 @@ export const PDFTemplateManager = ({ onTemplateSelect, selectedTemplate }: PDFTe
         .from('documents')
         .insert({
           title: file.name.replace('.pdf', ''),
-          document_type: 'lease_template',
+          document_type: 'autre',
           file_name: file.name,
           file_url: publicUrl,
           file_size: file.size,

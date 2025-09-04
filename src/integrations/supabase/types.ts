@@ -185,9 +185,15 @@ export type Database = {
           inventory_date: string
           inventory_type: string
           owner_id: string
+          owner_validation_status: string | null
           property_id: string | null
           rooms: Json
+          tenant_phone: string | null
+          tenant_validation_code: string | null
+          tenant_validation_date: string | null
+          tenant_validation_status: string | null
           updated_at: string
+          validation_expires_at: string | null
         }
         Insert: {
           created_at?: string
@@ -196,9 +202,15 @@ export type Database = {
           inventory_date: string
           inventory_type: string
           owner_id: string
+          owner_validation_status?: string | null
           property_id?: string | null
           rooms?: Json
+          tenant_phone?: string | null
+          tenant_validation_code?: string | null
+          tenant_validation_date?: string | null
+          tenant_validation_status?: string | null
           updated_at?: string
+          validation_expires_at?: string | null
         }
         Update: {
           created_at?: string
@@ -207,9 +219,15 @@ export type Database = {
           inventory_date?: string
           inventory_type?: string
           owner_id?: string
+          owner_validation_status?: string | null
           property_id?: string | null
           rooms?: Json
+          tenant_phone?: string | null
+          tenant_validation_code?: string | null
+          tenant_validation_date?: string | null
+          tenant_validation_status?: string | null
           updated_at?: string
+          validation_expires_at?: string | null
         }
         Relationships: [
           {
@@ -697,6 +715,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      generate_inventory_validation_code: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
       has_role: {
         Args: { _role: string; _user_id: string }
         Returns: boolean

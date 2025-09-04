@@ -55,9 +55,10 @@ type InventoryFormData = z.infer<typeof inventorySchema>;
 interface InventoryFormProps {
   onSubmit: (data: any) => void;
   initialData?: Partial<InventoryFormData>;
+  onCancel?: () => void;
 }
 
-export function InventoryForm({ onSubmit, initialData }: InventoryFormProps) {
+export function InventoryForm({ onSubmit, initialData, onCancel }: InventoryFormProps) {
   const [photoFiles, setPhotoFiles] = useState<{ [key: number]: File[] }>({});
   const { user } = useAuth();
 
@@ -210,7 +211,7 @@ export function InventoryForm({ onSubmit, initialData }: InventoryFormProps) {
                     <FormControl>
                       <RadioGroup
                         onValueChange={field.onChange}
-                        defaultValue={field.value}
+                        value={field.value}
                         className="flex flex-row space-x-4"
                       >
                         <div className="flex items-center space-x-2">
@@ -299,11 +300,11 @@ export function InventoryForm({ onSubmit, initialData }: InventoryFormProps) {
                       <FormItem>
                         <FormLabel>État de la pièce</FormLabel>
                         <FormControl>
-                          <RadioGroup
-                            onValueChange={field.onChange}
-                            defaultValue={field.value}
-                            className="grid grid-cols-2 gap-4"
-                          >
+                            <RadioGroup
+                              onValueChange={field.onChange}
+                              value={field.value}
+                              className="grid grid-cols-2 gap-4"
+                            >
                             {roomConditions.map((condition) => (
                               <div key={condition.value} className="flex items-center space-x-2">
                                 <RadioGroupItem value={condition.value} id={`${index}-${condition.value}`} />
@@ -394,7 +395,7 @@ export function InventoryForm({ onSubmit, initialData }: InventoryFormProps) {
           </Card>
 
           <div className="flex justify-end space-x-4">
-            <Button type="button" variant="outline">
+            <Button type="button" variant="outline" onClick={onCancel}>
               Annuler
             </Button>
             <Button type="submit">

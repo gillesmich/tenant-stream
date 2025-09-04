@@ -299,7 +299,8 @@ export default function Inventories() {
                   </DialogTitle>
                 </DialogHeader>
                 <InventoryForm 
-                  onSubmit={handleFormSubmit} 
+                  onSubmit={handleFormSubmit}
+                  onCancel={() => { setIsDialogOpen(false); setEditingInventory(null); }} 
                   initialData={editingInventory ? {
                     date: editingInventory.inventory_date,
                     type: editingInventory.inventory_type,

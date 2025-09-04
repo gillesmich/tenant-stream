@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import Navigation from "@/components/ui/navigation";
 import { Home, Users, FileText, Euro, Plus, TrendingUp, AlertTriangle, Shield } from "lucide-react";
+import { Link } from "react-router-dom";
 
 const LandlordDashboard = () => {
   const { user } = useAuth();
@@ -182,18 +183,18 @@ const LandlordDashboard = () => {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="flex gap-2">
-                <Button asChild className="flex-1">
-                  <a href="/properties">
-                    Voir mes propriétés
-                  </a>
-                </Button>
-                <Button variant="outline" size="icon" asChild>
-                  <a href="/properties?action=add">
-                    <Plus className="w-4 h-4" />
-                  </a>
-                </Button>
-              </div>
+                <div className="flex gap-2">
+                  <Button asChild className="flex-1">
+                    <Link to="/properties">
+                      Voir mes propriétés
+                    </Link>
+                  </Button>
+                  <Button variant="outline" size="icon" asChild>
+                    <Link to="/properties?action=add">
+                      <Plus className="w-4 h-4" />
+                    </Link>
+                  </Button>
+                </div>
             </CardContent>
           </Card>
 
@@ -210,14 +211,14 @@ const LandlordDashboard = () => {
             <CardContent>
               <div className="flex gap-2">
                 <Button asChild className="flex-1">
-                  <a href="/tenants">
+                  <Link to="/tenants">
                     Voir mes locataires
-                  </a>
+                  </Link>
                 </Button>
                 <Button variant="outline" size="icon" asChild>
-                  <a href="/tenants?action=add">
+                  <Link to="/tenants?action=add">
                     <Plus className="w-4 h-4" />
-                  </a>
+                  </Link>
                 </Button>
               </div>
             </CardContent>
@@ -236,14 +237,14 @@ const LandlordDashboard = () => {
             <CardContent>
               <div className="flex gap-2">
                 <Button asChild className="flex-1">
-                  <a href="/leases">
+                  <Link to="/leases">
                     Voir mes baux
-                  </a>
+                  </Link>
                 </Button>
                 <Button variant="outline" size="icon" asChild>
-                  <a href="/leases?action=add">
+                  <Link to="/leases?action=add">
                     <Plus className="w-4 h-4" />
-                  </a>
+                  </Link>
                 </Button>
               </div>
             </CardContent>
@@ -262,14 +263,14 @@ const LandlordDashboard = () => {
             <CardContent>
               <div className="flex gap-2">
                 <Button asChild className="flex-1">
-                  <a href="/rents">
+                  <Link to="/rents">
                     Voir les loyers
-                  </a>
+                  </Link>
                 </Button>
                 <Button variant="outline" size="icon" asChild>
-                  <a href="/rents?action=add">
+                  <Link to="/rents?action=add">
                     <Plus className="w-4 h-4" />
-                  </a>
+                  </Link>
                 </Button>
               </div>
             </CardContent>
@@ -288,14 +289,14 @@ const LandlordDashboard = () => {
             <CardContent>
               <div className="flex gap-2">
                 <Button asChild className="flex-1">
-                  <a href="/inventories">
+                  <Link to="/inventories">
                     Voir les états des lieux
-                  </a>
+                  </Link>
                 </Button>
                 <Button variant="outline" size="icon" asChild>
-                  <a href="/inventories">
+                  <Link to="/inventories">
                     <Plus className="w-4 h-4" />
-                  </a>
+                  </Link>
                 </Button>
               </div>
             </CardContent>
@@ -314,14 +315,14 @@ const LandlordDashboard = () => {
             <CardContent>
               <div className="flex gap-2">
                 <Button asChild className="flex-1">
-                  <a href="/documents">
+                  <Link to="/documents">
                     Voir les documents
-                  </a>
+                  </Link>
                 </Button>
                 <Button variant="outline" size="icon" asChild>
-                  <a href="/documents?action=add">
+                  <Link to="/documents?action=add">
                     <Plus className="w-4 h-4" />
-                  </a>
+                  </Link>
                 </Button>
               </div>
             </CardContent>
@@ -340,14 +341,14 @@ const LandlordDashboard = () => {
             <CardContent>
               <div className="flex gap-2">
                 <Button asChild className="flex-1">
-                  <a href="/cautions">
+                  <Link to="/cautions">
                     Voir les cautions
-                  </a>
+                  </Link>
                 </Button>
                 <Button variant="outline" size="icon" asChild>
-                  <a href="/cautions">
+                  <Link to="/cautions">
                     <Plus className="w-4 h-4" />
-                  </a>
+                  </Link>
                 </Button>
               </div>
             </CardContent>
@@ -376,7 +377,7 @@ const LandlordDashboard = () => {
                     </div>
                   </div>
                   <Button size="sm" asChild>
-                    <a href="/properties?action=add">Commencer</a>
+                    <Link to="/properties?action=add">Commencer</Link>
                   </Button>
                 </div>
                 
@@ -391,7 +392,7 @@ const LandlordDashboard = () => {
                     </div>
                   </div>
                   <Button size="sm" asChild>
-                    <a href="/tenants?action=add">Ajouter</a>
+                    <Link to="/tenants?action=add">Ajouter</Link>
                   </Button>
                 </div>
                 
@@ -406,7 +407,7 @@ const LandlordDashboard = () => {
                     </div>
                   </div>
                   <Button size="sm" asChild>
-                    <a href="/leases?action=add">Créer</a>
+                    <Link to="/leases?action=add">Créer</Link>
                   </Button>
                 </div>
               </div>

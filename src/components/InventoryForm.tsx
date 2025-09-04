@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -36,7 +36,7 @@ const roomSchema = z.object({
   name: z.string().min(1, "Le nom de la pièce est requis"),
   description: z.string().default(""),
   condition: z.enum(["neuf", "bon", "moyen", "mauvais"]).default("bon"),
-  photos: z.union([z.array(z.instanceof(File)), z.array(z.string())]).default([])
+  photos: z.array(z.string()).default([])
 });
 
 const inventorySchema = z.object({
@@ -57,6 +57,7 @@ interface InventoryFormProps {
 
 export function InventoryForm({ onSubmit, initialData, onCancel }: InventoryFormProps) {
   const [photoFiles, setPhotoFiles] = useState<{ [key: number]: File[] }>({});
+  const [existingPhotos, setExistingPhotos] = useState<{ [key: number]: string[] }>({});
   const { user } = useAuth();
 
   const form = useForm<InventoryFormData>({
@@ -71,9 +72,36 @@ export function InventoryForm({ onSubmit, initialData, onCancel }: InventoryForm
         photos: []
       })),
       generalComments: "",
-      ...initialData
     }
   });
+
+  // Load initial data when component mounts or initialData changes
+  useEffect(() => {
+    if (initialData) {
+      form.reset({
+        date: initialData.date || new Date().toISOString().split('T')[0],
+        type: initialData.type || "entree",
+        rooms: initialData.rooms || defaultRooms.map(name => ({
+          name,
+          description: "",
+          condition: "bon" as const,
+          photos: []
+        })),
+        generalComments: initialData.generalComments || "",
+      });
+
+      // Load existing photos
+      if (initialData.rooms) {
+        const existingPhotosMap: { [key: number]: string[] } = {};
+        initialData.rooms.forEach((room, index) => {
+          if (room.photos && room.photos.length > 0) {
+            existingPhotosMap[index] = room.photos;
+          }
+        });
+        setExistingPhotos(existingPhotosMap);
+      }
+    }
+  }, [initialData, form]);
 
   const { fields, append, remove } = useFieldArray({
     control: form.control,
@@ -93,16 +121,24 @@ export function InventoryForm({ onSubmit, initialData, onCancel }: InventoryForm
     }
   };
 
-  const removePhoto = (roomIndex: number, photoIndex: number) => {
-    const currentFiles = photoFiles[roomIndex] || [];
-    const updatedFiles = currentFiles.filter((_, index) => index !== photoIndex);
-    
-    setPhotoFiles(prev => ({
-      ...prev,
-      [roomIndex]: updatedFiles
-    }));
-    
-    // Don't set form value here as we manage files separately
+  const removePhoto = (roomIndex: number, photoIndex: number, isExisting = false) => {
+    if (isExisting) {
+      // Remove from existing photos
+      const currentExisting = existingPhotos[roomIndex] || [];
+      const updatedExisting = currentExisting.filter((_, index) => index !== photoIndex);
+      setExistingPhotos(prev => ({
+        ...prev,
+        [roomIndex]: updatedExisting
+      }));
+    } else {
+      // Remove from new photo files
+      const currentFiles = photoFiles[roomIndex] || [];
+      const updatedFiles = currentFiles.filter((_, index) => index !== photoIndex);
+      setPhotoFiles(prev => ({
+        ...prev,
+        [roomIndex]: updatedFiles
+      }));
+    }
   };
 
   const addRoom = () => {
@@ -365,14 +401,15 @@ export function InventoryForm({ onSubmit, initialData, onCancel }: InventoryForm
                         </Label>
                       </div>
                       
-                      {/* Photo Preview */}
-                      {photoFiles[index] && photoFiles[index].length > 0 && (
+                      {/* Existing Photos Preview */}
+                      {existingPhotos[index] && existingPhotos[index].length > 0 && (
                         <div className="grid grid-cols-3 gap-2 mt-4">
-                          {photoFiles[index].map((file, photoIndex) => (
-                            <div key={photoIndex} className="relative group">
+                          <div className="col-span-3 text-xs text-muted-foreground mb-2">Photos existantes:</div>
+                          {existingPhotos[index].map((photoUrl, photoIndex) => (
+                            <div key={`existing-${photoIndex}`} className="relative group">
                               <img
-                                src={URL.createObjectURL(file)}
-                                alt={`Photo ${photoIndex + 1}`}
+                                src={photoUrl}
+                                alt={`Photo existante ${photoIndex + 1}`}
                                 className="w-full h-20 object-cover rounded border"
                               />
                               <Button
@@ -380,7 +417,32 @@ export function InventoryForm({ onSubmit, initialData, onCancel }: InventoryForm
                                 variant="destructive"
                                 size="sm"
                                 className="absolute top-1 right-1 w-6 h-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
-                                onClick={() => removePhoto(index, photoIndex)}
+                                onClick={() => removePhoto(index, photoIndex, true)}
+                              >
+                                <Trash2 className="w-3 h-3" />
+                              </Button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* New Photos Preview */}
+                      {photoFiles[index] && photoFiles[index].length > 0 && (
+                        <div className="grid grid-cols-3 gap-2 mt-4">
+                          <div className="col-span-3 text-xs text-muted-foreground mb-2">Nouvelles photos:</div>
+                          {photoFiles[index].map((file, photoIndex) => (
+                            <div key={`new-${photoIndex}`} className="relative group">
+                              <img
+                                src={URL.createObjectURL(file)}
+                                alt={`Nouvelle photo ${photoIndex + 1}`}
+                                className="w-full h-20 object-cover rounded border"
+                              />
+                              <Button
+                                type="button"
+                                variant="destructive"
+                                size="sm"
+                                className="absolute top-1 right-1 w-6 h-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                                onClick={() => removePhoto(index, photoIndex, false)}
                               >
                                 <Trash2 className="w-3 h-3" />
                               </Button>

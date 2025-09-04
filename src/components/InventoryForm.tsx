@@ -181,7 +181,7 @@ export function InventoryForm({ onSubmit, initialData, onCancel }: InventoryForm
       </div>
 
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
+        <form onSubmit={form.handleSubmit(handleSubmit, (errors) => { console.log('[InventoryForm] validation errors', errors); })} className="space-y-6">
           {/* General Information */}
           <Card>
             <CardHeader>
@@ -395,7 +395,7 @@ export function InventoryForm({ onSubmit, initialData, onCancel }: InventoryForm
           </Card>
 
           <div className="flex justify-end space-x-4">
-            <Button type="button" variant="outline" onClick={onCancel}>
+            <Button type="button" variant="outline" onClick={() => { form.reset(); onCancel?.(); }}>
               Annuler
             </Button>
             <Button type="submit">

@@ -141,6 +141,7 @@ export function InventoryForm({ onSubmit, initialData, onCancel }: InventoryForm
             
             if (error) {
               console.error('Upload error:', error);
+              toast.error('Erreur lors de l\'upload d\'une photo');
               return null;
             }
             
@@ -170,7 +171,8 @@ export function InventoryForm({ onSubmit, initialData, onCancel }: InventoryForm
     };
     
     console.log('[InventoryForm] submit ready, forwarding to parent');
-    onSubmit(formDataWithPhotos);
+    // Important: retourner/attendre la promesse pour que RHF gère isSubmitting correctement
+    return Promise.resolve(onSubmit(formDataWithPhotos));
   };
 
   return (

@@ -258,7 +258,13 @@ export type Database = {
           start_date: string
           status: string | null
           tenant_id: string
+          tenant_phone: string | null
+          tenant_validation_code: string | null
+          tenant_validation_status: string | null
           updated_at: string
+          validation_attempts: number | null
+          validation_expires_at: string | null
+          validation_sent_at: string | null
         }
         Insert: {
           charges_amount?: number | null
@@ -278,7 +284,13 @@ export type Database = {
           start_date: string
           status?: string | null
           tenant_id: string
+          tenant_phone?: string | null
+          tenant_validation_code?: string | null
+          tenant_validation_status?: string | null
           updated_at?: string
+          validation_attempts?: number | null
+          validation_expires_at?: string | null
+          validation_sent_at?: string | null
         }
         Update: {
           charges_amount?: number | null
@@ -298,7 +310,13 @@ export type Database = {
           start_date?: string
           status?: string | null
           tenant_id?: string
+          tenant_phone?: string | null
+          tenant_validation_code?: string | null
+          tenant_validation_status?: string | null
           updated_at?: string
+          validation_attempts?: number | null
+          validation_expires_at?: string | null
+          validation_sent_at?: string | null
         }
         Relationships: [
           {
@@ -716,6 +734,10 @@ export type Database = {
     }
     Functions: {
       generate_inventory_validation_code: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
+      generate_lease_validation_code: {
         Args: Record<PropertyKey, never>
         Returns: string
       }

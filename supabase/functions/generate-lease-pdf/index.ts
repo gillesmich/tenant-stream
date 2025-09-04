@@ -75,13 +75,35 @@ serve(async (req) => {
 
 async function fillPDFTemplate(templateUrl: string, lease: any): Promise<Uint8Array> {
   try {
-    // Télécharger le template PDF
-    const response = await fetch(templateUrl);
-    if (!response.ok) {
-      throw new Error(`Impossible de télécharger le template: ${response.status}`);
+    // Télécharger le template PDF depuis Supabase Storage si l'URL pointe vers le bucket privé
+    let templateBuffer: ArrayBuffer | undefined;
+
+    try {
+      const match = templateUrl.match(/\/storage\/v1\/object\/(?:public|sign)\/documents\/(.+)$/);
+      const storagePath = match ? decodeURIComponent(match[1].split('?')[0]) : undefined;
+
+      if (storagePath) {
+        const supabase = createClient(
+          Deno.env.get("SUPABASE_URL") ?? "",
+          Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+          { auth: { persistSession: false } }
+        );
+        const { data, error } = await supabase.storage.from('documents').download(storagePath);
+        if (error) throw error;
+        templateBuffer = await data.arrayBuffer();
+      }
+    } catch (e) {
+      console.warn('Lecture via Storage échouée, fallback sur fetch direct:', e?.message ?? e);
     }
-    
-    const templateBuffer = await response.arrayBuffer();
+
+    if (!templateBuffer) {
+      const response = await fetch(templateUrl);
+      if (!response.ok) {
+        throw new Error(`Impossible de télécharger le template: ${response.status}`);
+      }
+      templateBuffer = await response.arrayBuffer();
+    }
+
     const pdfDoc = await PDFDocument.load(templateBuffer);
     const form = pdfDoc.getForm();
     

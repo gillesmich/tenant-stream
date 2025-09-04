@@ -22,7 +22,13 @@ const Leases = () => {
   const [loading, setLoading] = useState(true);
   const [selectedLease, setSelectedLease] = useState<any>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null);
+  const [selectedTemplate, setSelectedTemplate] = useState<string | null>(() => {
+    try {
+      return localStorage.getItem('leaseTemplateUrl');
+    } catch {
+      return null;
+    }
+  });
   const [showTemplateManager, setShowTemplateManager] = useState(false);
 
   useEffect(() => {
@@ -234,7 +240,13 @@ const Leases = () => {
           <div className="mb-6">
             <PDFTemplateManager
               selectedTemplate={selectedTemplate}
-              onTemplateSelect={setSelectedTemplate}
+              onTemplateSelect={(url) => {
+                setSelectedTemplate(url);
+                try {
+                  if (url) localStorage.setItem('leaseTemplateUrl', url);
+                  else localStorage.removeItem('leaseTemplateUrl');
+                } catch {}
+              }}
             />
           </div>
         )}

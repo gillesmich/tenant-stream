@@ -60,8 +60,11 @@ export const PDFTemplateManager = ({ onTemplateSelect, selectedTemplate }: PDFTe
 
     setLoading(true);
     try {
-      // Upload file to Supabase Storage
-      const fileName = `lease_template_${Date.now()}_${file.name}`;
+      // Upload file to Supabase Storage with user folder structure
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('User not authenticated');
+      
+      const fileName = `${user.id}/lease_template_${Date.now()}_${file.name}`;
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from('documents')
         .upload(fileName, file);
@@ -73,10 +76,7 @@ export const PDFTemplateManager = ({ onTemplateSelect, selectedTemplate }: PDFTe
         .from('documents')
         .getPublicUrl(fileName);
 
-      // Get current user
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('User not authenticated');
-
+      // Get current user (already done above)
       // Save template record
       const { error: insertError } = await supabase
         .from('documents')
@@ -122,9 +122,11 @@ export const PDFTemplateManager = ({ onTemplateSelect, selectedTemplate }: PDFTe
       // Also delete from storage
       const fileName = template.file_url.split('/').pop();
       if (fileName) {
+        const { data: { user } } = await supabase.auth.getUser();
+        const filePath = user ? `${user.id}/${fileName}` : fileName;
         await supabase.storage
           .from('documents')
-          .remove([fileName]);
+          .remove([filePath]);
       }
 
       toast({

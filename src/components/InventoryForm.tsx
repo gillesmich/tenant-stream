@@ -12,6 +12,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Camera, Plus, Trash2 } from "lucide-react";
+import { toast } from "@/components/ui/sonner";
 
 const roomConditions = [
   { value: "neuf", label: "Neuf" },
@@ -122,6 +123,7 @@ export function InventoryForm({ onSubmit, initialData, onCancel }: InventoryForm
 
     // Debug: vérifie que la soumission se déclenche
     console.log('[InventoryForm] submit start', { roomsCount: data.rooms?.length, date: data.date, type: data.type });
+    toast('Enregistrement en cours...');
     
     // Upload photos et conserve celles existantes
     const roomsWithPhotos = await Promise.all(
@@ -181,7 +183,7 @@ export function InventoryForm({ onSubmit, initialData, onCancel }: InventoryForm
       </div>
 
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(handleSubmit, (errors) => { console.log('[InventoryForm] validation errors', errors); })} className="space-y-6">
+        <form onSubmit={form.handleSubmit(handleSubmit, (errors) => { console.log('[InventoryForm] validation errors', errors); toast.error('Formulaire invalide. Corrigez les champs en rouge.'); })} className="space-y-6">
           {/* General Information */}
           <Card>
             <CardHeader>
@@ -395,10 +397,10 @@ export function InventoryForm({ onSubmit, initialData, onCancel }: InventoryForm
           </Card>
 
           <div className="flex justify-end space-x-4">
-            <Button type="button" variant="outline" onClick={() => { form.reset(); onCancel?.(); }}>
+            <Button type="button" variant="outline" onClick={() => { form.reset(); toast.info('Modification annulée'); onCancel?.(); }}>
               Annuler
             </Button>
-            <Button type="submit">
+            <Button type="submit" disabled={form.formState.isSubmitting}>
               Enregistrer l'état des lieux
             </Button>
           </div>

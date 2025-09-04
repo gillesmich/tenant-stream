@@ -302,7 +302,7 @@ export default function Inventories() {
                   onSubmit={handleFormSubmit}
                   onCancel={() => { setIsDialogOpen(false); setEditingInventory(null); }} 
                   initialData={editingInventory ? {
-                    date: editingInventory.inventory_date,
+                    date: (typeof editingInventory.inventory_date === 'string' ? editingInventory.inventory_date.split('T')[0] : new Date(editingInventory.inventory_date).toISOString().split('T')[0]),
                     type: editingInventory.inventory_type,
                     rooms: editingInventory.rooms,
                     generalComments: editingInventory.general_comments,

@@ -118,13 +118,17 @@ export function InventoryForm({ onSubmit, initialData }: InventoryFormProps) {
 
   const handleSubmit = async (data: InventoryFormData) => {
     if (!user) return;
+
+    // Debug: vérifie que la soumission se déclenche
+    console.log('[InventoryForm] submit start', { roomsCount: data.rooms?.length, date: data.date, type: data.type });
     
-    // Upload photos and get URLs
+    // Upload photos et conserve celles existantes
     const roomsWithPhotos = await Promise.all(
       data.rooms.map(async (room, index) => {
-        const photos = photoFiles[index] || [];
-        const photoUrls = await Promise.all(
-          photos.map(async (photo) => {
+        const newPhotos = photoFiles[index] || [];
+
+        const uploadedUrls = await Promise.all(
+          newPhotos.map(async (photo) => {
             const fileName = `${Date.now()}-${photo.name}`;
             const filePath = `${user.id}/${fileName}`;
             
@@ -145,19 +149,24 @@ export function InventoryForm({ onSubmit, initialData }: InventoryFormProps) {
           })
         );
         
+        // Conserver les anciennes URLs si présentes
+        const existing = Array.isArray(room.photos)
+          ? (room.photos as unknown[]).filter((p): p is string => typeof p === 'string')
+          : [];
+
         return {
           ...room,
-          photos: photoUrls.filter(url => url !== null)
+          photos: [...existing, ...uploadedUrls.filter((url): url is string => !!url)]
         };
       })
     );
 
-    // Merge the photos with the form data
     const formDataWithPhotos = {
       ...data,
       rooms: roomsWithPhotos
     };
     
+    console.log('[InventoryForm] submit ready, forwarding to parent');
     onSubmit(formDataWithPhotos);
   };
 

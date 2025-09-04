@@ -83,6 +83,39 @@ const Rents = () => {
     }
   };
 
+  const downloadReceipt = async (rentId: string) => {
+    try {
+      const { data, error } = await supabase.functions.invoke('generate-rent-receipt', {
+        body: { rentId }
+      });
+
+      if (error) throw error;
+
+      // Create a blob from the response and trigger download
+      const blob = new Blob([data], { type: 'application/pdf' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `quittance-loyer-${rentId}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+
+      toast({
+        title: "Succès",
+        description: "Quittance téléchargée avec succès",
+      });
+    } catch (error) {
+      console.error('Error downloading receipt:', error);
+      toast({
+        title: "Erreur",
+        description: "Impossible de télécharger la quittance",
+        variant: "destructive",
+      });
+    }
+  };
+
   const createNewRent = async () => {
     try {
       // Récupérer les baux actifs
@@ -330,8 +363,12 @@ const Rents = () => {
                     </div>
                     
                     <div className="flex space-x-2">
-                      {rent.status === "paye" && (
-                        <Button variant="outline" size="sm">
+                       {rent.status === "paye" && (
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => downloadReceipt(rent.id)}
+                        >
                           <Download className="w-4 h-4 mr-1" />
                           Quittance
                         </Button>

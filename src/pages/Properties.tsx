@@ -179,7 +179,10 @@ const Properties = () => {
                     variant="outline" 
                     size="sm" 
                     className="flex-1"
-                    onClick={() => console.log("View details for property", property.id)}
+                    onClick={() => toast({
+                      title: "Détails de la propriété",
+                      description: "Fonctionnalité à venir",
+                    })}
                   >
                     <Eye className="w-4 h-4 mr-1" />
                     Détails

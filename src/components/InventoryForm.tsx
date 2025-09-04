@@ -115,60 +115,86 @@ export function InventoryForm({ onSubmit, initialData, onCancel }: InventoryForm
   };
 
   const handleSubmit = async (data: InventoryFormData) => {
-    if (!user) return;
+    if (!user) {
+      toast.error('Vous devez être connecté pour sauvegarder');
+      return;
+    }
 
-    // Debug: vérifie que la soumission se déclenche
     console.log('[InventoryForm] submit start', { roomsCount: data.rooms?.length, date: data.date, type: data.type });
     toast('Enregistrement en cours...');
     
-    // Upload photos et conserve celles existantes
-    const roomsWithPhotos = await Promise.all(
-      data.rooms.map(async (room, index) => {
-        const newPhotos = photoFiles[index] || [];
+    try {
+      // Upload photos et conserve celles existantes
+      const roomsWithPhotos = await Promise.all(
+        data.rooms.map(async (room, index) => {
+          const newPhotos = photoFiles[index] || [];
 
-        const uploadedUrls = await Promise.all(
-          newPhotos.map(async (photo) => {
-            const fileName = `${Date.now()}-${photo.name}`;
-            const filePath = `${user.id}/${fileName}`;
-            
-            const { error } = await supabase.storage
-              .from('inventory-photos')
-              .upload(filePath, photo);
-            
-            if (error) {
-              console.error('Upload error:', error);
-              toast.error('Erreur lors de l\'upload d\'une photo');
-              return null;
-            }
-            
-            const { data: { publicUrl } } = supabase.storage
-              .from('inventory-photos')
-              .getPublicUrl(filePath);
-              
-            return publicUrl;
-          })
-        );
-        
-        // Conserver les anciennes URLs si présentes
-        const existing = Array.isArray(room.photos)
-          ? (room.photos as unknown[]).filter((p): p is string => typeof p === 'string')
-          : [];
+          if (newPhotos.length === 0) {
+            // Pas de nouvelles photos, conserver les existantes
+            return {
+              ...room,
+              photos: Array.isArray(room.photos) 
+                ? (room.photos as unknown[]).filter((p): p is string => typeof p === 'string')
+                : []
+            };
+          }
 
-        return {
-          ...room,
-          photos: [...existing, ...uploadedUrls.filter((url): url is string => !!url)]
-        };
-      })
-    );
+          const uploadedUrls = await Promise.all(
+            newPhotos.map(async (photo) => {
+              try {
+                const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}-${photo.name}`;
+                const filePath = `${user.id}/${fileName}`;
+                
+                const { error: uploadError } = await supabase.storage
+                  .from('inventory-photos')
+                  .upload(filePath, photo);
+                
+                if (uploadError) {
+                  console.error('Upload error:', uploadError);
+                  toast.error(`Erreur lors de l'upload de ${photo.name}`);
+                  return null;
+                }
+                
+                const { data: { publicUrl } } = supabase.storage
+                  .from('inventory-photos')
+                  .getPublicUrl(filePath);
+                  
+                return publicUrl;
+              } catch (error) {
+                console.error('Photo upload error:', error);
+                toast.error(`Erreur lors de l'upload de ${photo.name}`);
+                return null;
+              }
+            })
+          );
+          
+          // Conserver les anciennes URLs si présentes
+          const existing = Array.isArray(room.photos)
+            ? (room.photos as unknown[]).filter((p): p is string => typeof p === 'string')
+            : [];
 
-    const formDataWithPhotos = {
-      ...data,
-      rooms: roomsWithPhotos
-    };
-    
-    console.log('[InventoryForm] submit ready, forwarding to parent');
-    // Important: retourner/attendre la promesse pour que RHF gère isSubmitting correctement
-    return Promise.resolve(onSubmit(formDataWithPhotos));
+          return {
+            ...room,
+            photos: [...existing, ...uploadedUrls.filter((url): url is string => !!url)]
+          };
+        })
+      );
+
+      const formDataWithPhotos = {
+        ...data,
+        rooms: roomsWithPhotos
+      };
+      
+      console.log('[InventoryForm] submit ready, forwarding to parent');
+      await onSubmit(formDataWithPhotos);
+      
+      // Reset photo files after successful submission
+      setPhotoFiles({});
+      
+    } catch (error) {
+      console.error('[InventoryForm] submit error:', error);
+      toast.error('Erreur lors de la sauvegarde');
+    }
   };
 
   return (

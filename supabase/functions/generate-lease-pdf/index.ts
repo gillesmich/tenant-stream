@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { PDFDocument, PDFForm } from "https://cdn.skypack.dev/pdf-lib@1.17.1";
 
 
 const corsHeaders = {
@@ -13,7 +14,7 @@ serve(async (req) => {
   }
 
   try {
-    const { leaseId } = await req.json();
+    const { leaseId, templateUrl } = await req.json();
     
     const supabaseAdmin = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
@@ -36,16 +37,21 @@ serve(async (req) => {
       throw new Error("Bail introuvable");
     }
 
-    // Générer le contenu HTML du bail
-    const htmlContent = generateLeaseHTML(lease);
-
     // Valider les données du bail avant génération
     if (!validateLeaseData(lease)) {
       throw new Error("Données du bail incomplètes ou invalides");
     }
 
-    // Créer un PDF avec le contenu structuré
-    const pdfBuffer = generatePDFFromHTML(htmlContent);
+    let pdfBuffer: Uint8Array;
+
+    if (templateUrl) {
+      // Utiliser un PDF template remplissable
+      pdfBuffer = await fillPDFTemplate(templateUrl, lease);
+    } else {
+      // Générer un PDF classique (fallback)
+      const htmlContent = generateLeaseHTML(lease);
+      pdfBuffer = generatePDFFromHTML(htmlContent);
+    }
 
     return new Response(pdfBuffer, {
       headers: {
@@ -66,6 +72,88 @@ serve(async (req) => {
     );
   }
 });
+
+async function fillPDFTemplate(templateUrl: string, lease: any): Promise<Uint8Array> {
+  try {
+    // Télécharger le template PDF
+    const response = await fetch(templateUrl);
+    if (!response.ok) {
+      throw new Error(`Impossible de télécharger le template: ${response.status}`);
+    }
+    
+    const templateBuffer = await response.arrayBuffer();
+    const pdfDoc = await PDFDocument.load(templateBuffer);
+    const form = pdfDoc.getForm();
+    
+    // Mapper les données vers les champs du formulaire PDF
+    const fieldMappings = {
+      // Informations locataire
+      'tenant_first_name': lease.tenants?.first_name || '',
+      'tenant_last_name': lease.tenants?.last_name || '',
+      'tenant_name': `${lease.tenants?.first_name || ''} ${lease.tenants?.last_name || ''}`.trim(),
+      'tenant_email': lease.tenants?.email || '',
+      'tenant_phone': lease.tenants?.phone || '',
+      'tenant_birth_date': lease.tenants?.birth_date ? new Date(lease.tenants.birth_date).toLocaleDateString('fr-FR') : '',
+      
+      // Informations propriété
+      'property_address': lease.properties?.address || '',
+      'property_city': lease.properties?.city || '',
+      'property_postal_code': lease.properties?.postal_code || '',
+      'property_type': lease.properties?.property_type || '',
+      'property_surface': lease.properties?.surface?.toString() || '',
+      'property_rooms': lease.properties?.rooms?.toString() || '',
+      'property_bedrooms': lease.properties?.bedrooms?.toString() || '',
+      'property_furnished': lease.properties?.furnished ? 'Oui' : 'Non',
+      
+      // Informations bail
+      'lease_type': lease.lease_type || '',
+      'start_date': new Date(lease.start_date).toLocaleDateString('fr-FR'),
+      'end_date': lease.end_date ? new Date(lease.end_date).toLocaleDateString('fr-FR') : '',
+      'rent_amount': lease.rent_amount?.toString() || '',
+      'charges_amount': lease.charges_amount?.toString() || '0',
+      'deposit_amount': lease.deposit_amount?.toString() || '',
+      'total_amount': (parseFloat(lease.rent_amount || 0) + parseFloat(lease.charges_amount || 0)).toString(),
+      
+      // Notes
+      'notes': lease.notes || '',
+      
+      // Dates système
+      'creation_date': new Date().toLocaleDateString('fr-FR'),
+      'signature_date': new Date().toLocaleDateString('fr-FR')
+    };
+    
+    // Remplir les champs du formulaire
+    const fields = form.getFields();
+    console.log(`Template contient ${fields.length} champs`);
+    
+    fields.forEach(field => {
+      const fieldName = field.getName();
+      const value = fieldMappings[fieldName as keyof typeof fieldMappings];
+      
+      if (value !== undefined) {
+        try {
+          if (field.constructor.name === 'PDFTextField') {
+            (field as any).setText(value);
+          } else if (field.constructor.name === 'PDFCheckBox') {
+            (field as any).check(value === 'Oui' || value === 'true');
+          }
+          console.log(`Champ rempli: ${fieldName} = ${value}`);
+        } catch (fieldError) {
+          console.warn(`Erreur lors du remplissage du champ ${fieldName}:`, fieldError);
+        }
+      }
+    });
+    
+    // Optionnel: aplatir le formulaire pour empêcher les modifications
+    // form.flatten();
+    
+    return await pdfDoc.save();
+    
+  } catch (error) {
+    console.error('Erreur lors du remplissage du template PDF:', error);
+    throw new Error(`Erreur lors du remplissage du template PDF: ${error.message}`);
+  }
+}
 
 function validateLeaseData(lease: any): boolean {
   const required = [

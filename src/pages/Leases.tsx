@@ -5,9 +5,10 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
-import { Plus, Search, FileText, Calendar, Euro, Download, Send } from "lucide-react";
+import { Plus, Search, FileText, Calendar, Euro, Download, Send, Settings } from "lucide-react";
 import Navigation from "@/components/ui/navigation";
 import { LeaseForm } from "@/components/LeaseForm";
+import { PDFTemplateManager } from "@/components/PDFTemplateManager";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
@@ -21,6 +22,8 @@ const Leases = () => {
   const [loading, setLoading] = useState(true);
   const [selectedLease, setSelectedLease] = useState<any>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null);
+  const [showTemplateManager, setShowTemplateManager] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -97,7 +100,10 @@ const Leases = () => {
             'Accept': 'application/pdf',
             'Authorization': token ? `Bearer ${token}` : '',
           },
-          body: JSON.stringify({ leaseId }),
+          body: JSON.stringify({ 
+            leaseId,
+            templateUrl: selectedTemplate 
+          }),
         }
       );
 
@@ -181,25 +187,43 @@ const Leases = () => {
             <h1 className="text-3xl font-bold mb-2">Gestion des Baux</h1>
             <p className="text-muted-foreground">Créez et gérez tous vos contrats de location</p>
           </div>
-          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-            <DialogTrigger asChild>
-              <Button 
-                className="bg-gradient-primary"
-                onClick={() => setSelectedLease(null)}
-              >
-                <Plus className="w-4 h-4 mr-2" />
-                Nouveau bail
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-              <LeaseForm
-                lease={selectedLease}
-                onSuccess={handleFormSuccess}
-                onCancel={handleCancel}
-              />
-            </DialogContent>
-          </Dialog>
+          <div className="flex gap-2">
+            <Button 
+              variant="outline"
+              onClick={() => setShowTemplateManager(!showTemplateManager)}
+            >
+              <Settings className="w-4 h-4 mr-2" />
+              Templates PDF
+            </Button>
+            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+              <DialogTrigger asChild>
+                <Button 
+                  className="bg-gradient-primary"
+                  onClick={() => setSelectedLease(null)}
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  Nouveau bail
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+                <LeaseForm
+                  lease={selectedLease}
+                  onSuccess={handleFormSuccess}
+                  onCancel={handleCancel}
+                />
+              </DialogContent>
+            </Dialog>
+          </div>
         </div>
+
+        {showTemplateManager && (
+          <div className="mb-6">
+            <PDFTemplateManager
+              selectedTemplate={selectedTemplate}
+              onTemplateSelect={setSelectedTemplate}
+            />
+          </div>
+        )}
 
         <div className="flex flex-col md:flex-row gap-4 mb-6">
           <div className="relative flex-1">

@@ -34,21 +34,17 @@ const defaultRooms = [
 
 const roomSchema = z.object({
   name: z.string().min(1, "Le nom de la pièce est requis"),
-  description: z.string().optional(),
-  condition: z.enum(["neuf", "bon", "moyen", "mauvais"], {
-    required_error: "L'état de la pièce est requis"
-  }),
-  photos: z.union([z.array(z.instanceof(File)), z.array(z.string())]).optional()
+  description: z.string().default(""),
+  condition: z.enum(["neuf", "bon", "moyen", "mauvais"]).default("bon"),
+  photos: z.union([z.array(z.instanceof(File)), z.array(z.string())]).default([])
 });
 
 const inventorySchema = z.object({
   propertyId: z.string().optional(),
   date: z.string().min(1, "La date est requise"),
-  type: z.enum(["entree", "sortie"], {
-    required_error: "Le type d'état des lieux est requis"
-  }),
+  type: z.enum(["entree", "sortie"]).default("entree"),
   rooms: z.array(roomSchema).min(1, "Au moins une pièce est requise"),
-  generalComments: z.string().optional()
+  generalComments: z.string().default("")
 });
 
 type InventoryFormData = z.infer<typeof inventorySchema>;

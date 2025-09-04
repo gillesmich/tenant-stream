@@ -250,9 +250,10 @@ export const PDFTemplateManager = ({ onTemplateSelect, selectedTemplate }: PDFTe
                   <Button
                     size="sm"
                     variant={selectedTemplate === template.file_url ? "default" : "outline"}
-                    onClick={() => onTemplateSelect(
-                      selectedTemplate === template.file_url ? null : template.file_url
-                    )}
+                    onClick={() => {
+                      console.log('Template sélectionné:', template.file_url);
+                      onTemplateSelect(template.file_url);
+                    }}
                   >
                     {selectedTemplate === template.file_url ? "Sélectionné" : "Utiliser"}
                   </Button>

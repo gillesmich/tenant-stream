@@ -161,37 +161,51 @@ export const PDFTemplateManager = ({ onTemplateSelect, selectedTemplate }: PDFTe
           <div className="text-center">
             <Upload className="mx-auto h-8 w-8 text-muted-foreground mb-2" />
             <div className="space-y-2">
-              <Label htmlFor="template-upload" className="cursor-pointer">
+              <div>
                 <Input
                   id="template-upload"
                   type="file"
                   accept=".pdf"
                   className="hidden"
                   onChange={(e) => {
+                    console.log('File input changed:', e.target.files);
                     const file = e.target.files?.[0];
                     if (file) {
+                      console.log('File selected:', file.name, file.type);
                       setUploadingFile(file);
                     }
                   }}
                 />
-                <Button variant="outline" disabled={loading}>
+                <Button 
+                  variant="outline" 
+                  disabled={loading} 
+                  type="button"
+                  onClick={() => {
+                    console.log('Button clicked, triggering file input');
+                    document.getElementById('template-upload')?.click();
+                  }}
+                >
                   Choisir un template PDF
                 </Button>
-              </Label>
+              </div>
               {uploadingFile && (
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 mt-2">
                   <span className="text-sm">{uploadingFile.name}</span>
                   <Button
                     size="sm"
-                    onClick={() => uploadTemplate(uploadingFile)}
+                    onClick={() => {
+                      console.log('Upload button clicked');
+                      uploadTemplate(uploadingFile);
+                    }}
                     disabled={loading}
                   >
-                    Upload
+                    {loading ? 'Upload...' : 'Upload'}
                   </Button>
                   <Button
                     size="sm"
                     variant="outline"
                     onClick={() => setUploadingFile(null)}
+                    disabled={loading}
                   >
                     Annuler
                   </Button>

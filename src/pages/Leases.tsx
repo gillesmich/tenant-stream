@@ -76,6 +76,8 @@ const Leases = () => {
 
   const generatePDF = async (leaseId: string) => {
     try {
+      console.log('Génération PDF avec template:', selectedTemplate);
+      
       // Open a preview tab immediately to avoid popup blockers and show progress
       const preview = window.open('', '_blank');
       if (!preview) {
@@ -91,6 +93,12 @@ const Leases = () => {
       const { data: sessionData } = await supabase.auth.getSession();
       const token = sessionData?.session?.access_token || '';
 
+      const requestBody = { 
+        leaseId,
+        templateUrl: selectedTemplate 
+      };
+      console.log('Request body:', requestBody);
+
       const res = await fetch(
         'https://vbpyykdkaoktzuewbzzl.supabase.co/functions/v1/generate-lease-pdf',
         {
@@ -100,14 +108,15 @@ const Leases = () => {
             'Accept': 'application/pdf',
             'Authorization': token ? `Bearer ${token}` : '',
           },
-          body: JSON.stringify({ 
-            leaseId,
-            templateUrl: selectedTemplate 
-          }),
+          body: JSON.stringify(requestBody),
         }
       );
 
-      if (!res.ok) throw new Error('Failed to generate PDF');
+      if (!res.ok) {
+        const errorText = await res.text();
+        console.error('Erreur API:', errorText);
+        throw new Error('Failed to generate PDF');
+      }
 
       const buffer = await res.arrayBuffer();
       const blob = new Blob([buffer], { type: 'application/pdf' });

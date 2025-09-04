@@ -58,6 +58,7 @@ interface InventoryFormProps {
 export function InventoryForm({ onSubmit, initialData, onCancel }: InventoryFormProps) {
   const [photoFiles, setPhotoFiles] = useState<{ [key: number]: File[] }>({});
   const [existingPhotos, setExistingPhotos] = useState<{ [key: number]: string[] }>({});
+  const [deletedPhotos, setDeletedPhotos] = useState<string[]>([]); // Track photos to delete from storage
   const { user } = useAuth();
 
   const form = useForm<InventoryFormData>({
@@ -123,8 +124,13 @@ export function InventoryForm({ onSubmit, initialData, onCancel }: InventoryForm
 
   const removePhoto = (roomIndex: number, photoIndex: number, isExisting = false) => {
     if (isExisting) {
-      // Remove from existing photos
+      // Remove from existing photos and add to deletion list
       const currentExisting = existingPhotos[roomIndex] || [];
+      const photoToDelete = currentExisting[photoIndex];
+      if (photoToDelete) {
+        setDeletedPhotos(prev => [...prev, photoToDelete]);
+      }
+      
       const updatedExisting = currentExisting.filter((_, index) => index !== photoIndex);
       setExistingPhotos(prev => ({
         ...prev,
@@ -160,75 +166,74 @@ export function InventoryForm({ onSubmit, initialData, onCancel }: InventoryForm
     toast('Enregistrement en cours...');
     
     try {
-      // Upload photos et conserve celles existantes
-      const roomsWithPhotos = await Promise.all(
-        data.rooms.map(async (room, index) => {
-          const newPhotos = photoFiles[index] || [];
+      // Delete photos from storage that were marked for deletion
+      for (const photoUrl of deletedPhotos) {
+        try {
+          // Extract file path from URL
+          const urlParts = photoUrl.split('/');
+          const fileName = urlParts[urlParts.length - 1];
+          const userFolder = urlParts[urlParts.length - 2];
+          const filePath = `${userFolder}/${fileName}`;
+          
+          const { error: deleteError } = await supabase.storage
+            .from('inventory-photos')
+            .remove([filePath]);
+            
+          if (deleteError) {
+            console.error('Error deleting photo:', deleteError);
+            // Continue anyway - don't block the save for deletion errors
+          }
+        } catch (deleteError) {
+          console.error('Error parsing photo URL for deletion:', deleteError);
+          // Continue anyway
+        }
+      }
 
-          if (newPhotos.length === 0) {
-            // Pas de nouvelles photos, conserver les existantes
-            return {
-              ...room,
-              photos: Array.isArray(room.photos) 
-                ? (room.photos as unknown[]).filter((p): p is string => typeof p === 'string')
-                : []
-            };
+      // Upload new photos to Supabase Storage and combine with existing photos
+      const roomsWithPhotos = await Promise.all(data.rooms.map(async (room, roomIndex) => {
+        const roomFiles = photoFiles[roomIndex] || [];
+        const existingRoomPhotos = existingPhotos[roomIndex] || [];
+        const uploadedPhotos = [];
+
+        for (const file of roomFiles) {
+          const fileExt = file.name.split('.').pop();
+          const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
+          const filePath = `${user.id}/${fileName}`;
+
+          const { error: uploadError } = await supabase.storage
+            .from('inventory-photos')
+            .upload(filePath, file);
+
+          if (uploadError) {
+            console.error('Error uploading photo:', uploadError);
+            toast.error(`Erreur lors de l'upload de la photo: ${uploadError.message}`);
+            throw uploadError;
           }
 
-          const uploadedUrls = await Promise.all(
-            newPhotos.map(async (photo) => {
-              try {
-                const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}-${photo.name}`;
-                const filePath = `${user.id}/${fileName}`;
-                
-                const { error: uploadError } = await supabase.storage
-                  .from('inventory-photos')
-                  .upload(filePath, photo);
-                
-                if (uploadError) {
-                  console.error('Upload error:', uploadError);
-                  toast.error(`Erreur lors de l'upload de ${photo.name}`);
-                  return null;
-                }
-                
-                const { data: { publicUrl } } = supabase.storage
-                  .from('inventory-photos')
-                  .getPublicUrl(filePath);
-                  
-                return publicUrl;
-              } catch (error) {
-                console.error('Photo upload error:', error);
-                toast.error(`Erreur lors de l'upload de ${photo.name}`);
-                return null;
-              }
-            })
-          );
-          
-          // Conserver les anciennes URLs si présentes
-          const existing = Array.isArray(room.photos)
-            ? (room.photos as unknown[]).filter((p): p is string => typeof p === 'string')
-            : [];
+          const { data: urlData } = supabase.storage
+            .from('inventory-photos')
+            .getPublicUrl(filePath);
 
-          return {
-            ...room,
-            photos: [...existing, ...uploadedUrls.filter((url): url is string => !!url)]
-          };
-        })
-      );
+          uploadedPhotos.push(urlData.publicUrl);
+        }
 
-      const formDataWithPhotos = {
+        return {
+          ...room,
+          photos: [...existingRoomPhotos, ...uploadedPhotos]
+        };
+      }));
+
+      // Reset all photo states after successful upload
+      setPhotoFiles({});
+      setExistingPhotos({});
+      setDeletedPhotos([]);
+
+      onSubmit({
         ...data,
         rooms: roomsWithPhotos
-      };
-      
-      console.log('[InventoryForm] submit ready, forwarding to parent');
-      await onSubmit(formDataWithPhotos);
-      
-      // Reset photo files after successful submission
-      setPhotoFiles({});
-      
+      });
     } catch (error) {
-      console.error('[InventoryForm] submit error:', error);
+      console.error('Error in handleSubmit:', error);
       toast.error('Erreur lors de la sauvegarde');
     }
   };

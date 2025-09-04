@@ -40,7 +40,7 @@ const roomSchema = z.object({
 });
 
 const inventorySchema = z.object({
-  propertyId: z.string().optional(),
+  propertyId: z.string().nullable().optional(),
   date: z.string().min(1, "La date est requise"),
   type: z.enum(["entree", "sortie"]).default("entree"),
   rooms: z.array(roomSchema).min(1, "Au moins une pièce est requise"),

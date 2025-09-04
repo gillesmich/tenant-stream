@@ -40,12 +40,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       console.log('Loading user profile for:', userId);
       
       // Test connection first
-      const { data: testData, error: testError } = await supabase
+      const { count: testCount, error: testError } = await supabase
         .from('profiles')
-        .select('count(*)')
-        .limit(1);
+        .select('*', { count: 'exact', head: true });
       
-      console.log('Connection test result:', { testData, testError });
+      console.log('Connection test result:', { testCount, testError });
       
       const { data: profile, error } = await supabase
         .from('profiles')

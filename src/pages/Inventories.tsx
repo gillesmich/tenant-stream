@@ -211,8 +211,8 @@ export default function Inventories() {
           <div class="header">
             <h1>État des lieux</h1>
             <div class="header-info">
-              <div><strong>Propriété:</strong><br>${inventory.properties?.title || "Non spécifiée"}</div>
-              <div><strong>Adresse:</strong><br>${inventory.properties?.address || "Non spécifiée"}</div>
+              <div><strong>Propriété:</strong><br>${inventory.properties?.title || "Lieu du bien"}</div>
+              <div><strong>Adresse:</strong><br>${inventory.properties?.address || "Lieu du bien"}</div>
               <div><strong>Date:</strong><br>${new Date(inventory.inventory_date).toLocaleDateString('fr-FR')}</div>
             </div>
             <div>
@@ -337,10 +337,10 @@ export default function Inventories() {
                       <div className="flex justify-between items-start">
                         <div>
                           <CardTitle className="text-lg">
-                            {inventory.properties?.title || 'Propriété non spécifiée'}
+                            {inventory.properties?.title || 'Lieu du bien'}
                           </CardTitle>
                           <p className="text-sm text-muted-foreground mt-1">
-                            {inventory.properties?.address || 'Adresse non spécifiée'}
+                            {inventory.properties?.address || 'Lieu du bien'}
                           </p>
                         </div>
                         <Badge variant={inventory.inventory_type === 'entree' ? 'default' : 'secondary'}>

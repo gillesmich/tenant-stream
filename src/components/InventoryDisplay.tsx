@@ -55,11 +55,11 @@ export function InventoryDisplay({ inventory }: InventoryDisplayProps) {
         <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
           <div>
             <Label className="font-semibold">Propriété:</Label>
-            <p>{inventory.properties?.title || "Non spécifiée"}</p>
+            <p>{inventory.properties?.title || "Lieu du bien"}</p>
           </div>
           <div>
             <Label className="font-semibold">Adresse:</Label>
-            <p>{inventory.properties?.address || "Non spécifiée"}</p>
+            <p>{inventory.properties?.address || "Lieu du bien"}</p>
           </div>
           <div>
             <Label className="font-semibold">Date:</Label>

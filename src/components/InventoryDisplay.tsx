@@ -1,7 +1,10 @@
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-import { Camera } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Camera, FileDown } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 interface Room {
   name: string;
@@ -49,6 +52,38 @@ const getConditionColor = (condition: string) => {
 };
 
 export function InventoryDisplay({ inventory }: InventoryDisplayProps) {
+  const generatePDF = async () => {
+    try {
+      const { data, error } = await supabase.functions.invoke('generate-inventory-pdf', {
+        body: { inventoryId: inventory.id }
+      });
+
+      if (error) {
+        console.error('Error generating PDF:', error);
+        toast.error("Erreur lors de la génération du PDF");
+        return;
+      }
+
+      // Create blob from response
+      const blob = new Blob([data], { type: 'application/pdf' });
+      const url = window.URL.createObjectURL(blob);
+      
+      // Create download link
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `etat-des-lieux-${inventory.id}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      
+      toast.success("PDF généré avec succès!");
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      toast.error("Erreur lors de la génération du PDF");
+    }
+  };
+
   return (
     <div className="max-w-4xl mx-auto p-6 space-y-6 print:p-4" id="inventory-display">
       {/* Header */}
@@ -74,10 +109,14 @@ export function InventoryDisplay({ inventory }: InventoryDisplayProps) {
             </div>
           )}
         </div>
-        <div className="mt-4">
+        <div className="mt-4 flex flex-col items-center gap-3">
           <Badge variant={inventory.inventory_type === 'entree' ? 'default' : 'secondary'} className="text-sm">
             {inventory.inventory_type === 'entree' ? 'État des lieux d\'entrée' : 'État des lieux de sortie'}
           </Badge>
+          <Button onClick={generatePDF} className="flex items-center gap-2">
+            <FileDown className="w-4 h-4" />
+            Générer PDF
+          </Button>
         </div>
       </div>
 

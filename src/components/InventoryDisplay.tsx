@@ -80,22 +80,35 @@ export function InventoryDisplay({ inventory }: InventoryDisplayProps) {
         <meta charset="UTF-8">
         <title>État des Lieux</title>
         <style>
-          body { font-family: Arial, sans-serif; margin: 0; padding: 20px; }
+          body { font-family: Arial, sans-serif; margin: 0; padding: 20px; font-size: 12px; }
           .header { text-align: center; margin-bottom: 30px; }
-          .section { margin-bottom: 20px; }
-          .room { margin-bottom: 15px; border: 1px solid #ddd; padding: 10px; }
-          .room-header { font-weight: bold; margin-bottom: 10px; }
-          .condition { padding: 2px 8px; border-radius: 4px; font-size: 12px; }
+          .section { margin-bottom: 20px; page-break-inside: avoid; }
+          .room { margin-bottom: 20px; border: 1px solid #ddd; padding: 15px; page-break-inside: avoid; }
+          .room-header { font-weight: bold; margin-bottom: 10px; font-size: 14px; }
+          .condition { padding: 4px 8px; border-radius: 4px; font-size: 11px; margin-left: 10px; }
           .condition-neuf { background-color: #22c55e; color: white; }
           .condition-bon { background-color: #3b82f6; color: white; }
           .condition-moyen { background-color: #f59e0b; color: white; }
           .condition-mauvais { background-color: #ef4444; color: white; }
+          .photos-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-top: 10px; }
+          .photo-container { text-align: center; }
+          .photo { max-width: 100%; height: 120px; object-fit: cover; border: 1px solid #ddd; border-radius: 4px; }
+          .photo-caption { font-size: 10px; color: #666; margin-top: 5px; }
+          h1 { font-size: 24px; margin: 0; }
+          h2 { font-size: 18px; margin: 10px 0; }
+          h3 { font-size: 16px; margin: 15px 0 10px 0; }
+          p { margin: 5px 0; line-height: 1.4; }
+          @media print {
+            body { font-size: 11px; }
+            .room { page-break-inside: avoid; }
+            .photos-grid { page-break-inside: avoid; }
+          }
         </style>
       </head>
       <body>
         <div class="header">
           <h1>ÉTAT DES LIEUX</h1>
-          <h2>${inventory.inventory_type === 'entree' ? 'D\'ENTRÉE' : 'DE SORTIE'}</h2>
+          <h2>${inventory.inventory_type === 'entree' ? "D'ENTRÉE" : 'DE SORTIE'}</h2>
         </div>
         
         <div class="section">
@@ -117,7 +130,19 @@ export function InventoryDisplay({ inventory }: InventoryDisplayProps) {
                 </span>
               </div>
               ${room.description ? `<p><strong>Description:</strong> ${room.description}</p>` : ''}
-              ${room.photos && room.photos.length > 0 ? `<p><strong>Photos:</strong> ${room.photos.length} photo(s) attachée(s)</p>` : ''}
+              ${room.photos && room.photos.length > 0 ? `
+                <div>
+                  <p><strong>Photos (${room.photos.length}):</strong></p>
+                  <div class="photos-grid">
+                    ${room.photos.map((photo: string, index: number) => `
+                      <div class="photo-container">
+                        <img src="${photo}" alt="Photo ${index + 1} - ${room.name}" class="photo" />
+                        <div class="photo-caption">Photo ${index + 1}</div>
+                      </div>
+                    `).join('')}
+                  </div>
+                </div>
+              ` : '<p><em>Aucune photo disponible</em></p>'}
             </div>
           `).join('')}
         </div>
@@ -130,7 +155,7 @@ export function InventoryDisplay({ inventory }: InventoryDisplayProps) {
         ` : ''}
         
         <div class="section" style="margin-top: 40px;">
-          <p>Date de génération: ${new Date().toLocaleDateString('fr-FR')}</p>
+          <p><em>Date de génération: ${new Date().toLocaleDateString('fr-FR')} à ${new Date().toLocaleTimeString('fr-FR')}</em></p>
         </div>
       </body>
       </html>

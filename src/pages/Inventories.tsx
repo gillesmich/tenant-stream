@@ -30,7 +30,8 @@ export default function Inventories() {
     if (!user) return;
     
     try {
-      const { data, error } = await supabase
+      // First get inventories
+      const { data: inventoriesData, error: inventoriesError } = await supabase
         .from('inventories')
         .select(`
           *,
@@ -39,13 +40,32 @@ export default function Inventories() {
         .eq('owner_id', user.id)
         .order('created_at', { ascending: false });
 
-      if (error) {
-        console.error('Error loading inventories:', error);
+      if (inventoriesError) {
+        console.error('Error loading inventories:', inventoriesError);
         toast.error('Erreur lors du chargement des états des lieux');
         return;
       }
 
-      setInventories(data || []);
+      // Then get tenants for this owner
+      const { data: tenantsData, error: tenantsError } = await supabase
+        .from('tenants')
+        .select('*')
+        .eq('owner_id', user.id);
+
+      if (tenantsError) {
+        console.error('Error loading tenants:', tenantsError);
+      }
+
+      // Combine the data
+      const inventoriesWithTenants = (inventoriesData || []).map(inventory => {
+        const tenant = (tenantsData || []).find(t => t.phone === inventory.tenant_phone);
+        return {
+          ...inventory,
+          tenant_name: tenant ? `${tenant.first_name} ${tenant.last_name}` : null
+        };
+      });
+
+      setInventories(inventoriesWithTenants);
     } catch (error) {
       console.error('Error:', error);
       toast.error('Erreur lors du chargement des états des lieux');
@@ -67,7 +87,8 @@ export default function Inventories() {
             inventory_date: data.date,
             inventory_type: data.type,
             rooms: data.rooms,
-            general_comments: data.generalComments
+            general_comments: data.generalComments,
+            tenant_phone: data.tenantPhone
           })
           .eq('id', editingInventory.id);
 
@@ -89,7 +110,8 @@ export default function Inventories() {
               inventory_date: data.date,
               inventory_type: data.type,
               rooms: data.rooms,
-              general_comments: data.generalComments
+              general_comments: data.generalComments,
+              tenant_phone: data.tenantPhone
             }
           ]);
 
@@ -306,7 +328,8 @@ export default function Inventories() {
                     type: editingInventory.inventory_type,
                     rooms: editingInventory.rooms,
                     generalComments: editingInventory.general_comments,
-                    propertyId: editingInventory.property_id
+                    propertyId: editingInventory.property_id,
+                    tenantPhone: editingInventory.tenant_phone
                   } : undefined}
                 />
               </DialogContent>
@@ -355,14 +378,19 @@ export default function Inventories() {
                             new Date(inventory.inventory_date).toLocaleDateString('fr-FR')
                           }
                         </p>
-                        <p className="text-sm">
-                          <span className="font-medium">Pièces:</span> {inventory.rooms?.length || 0}
-                        </p>
-                        {inventory.general_comments && (
-                          <p className="text-sm text-muted-foreground truncate">
-                            {inventory.general_comments}
-                          </p>
-                        )}
+                         <p className="text-sm">
+                           <span className="font-medium">Pièces:</span> {inventory.rooms?.length || 0}
+                         </p>
+                         {inventory.tenant_name && (
+                           <p className="text-sm">
+                             <span className="font-medium">Locataire:</span> {inventory.tenant_name}
+                           </p>
+                         )}
+                         {inventory.general_comments && (
+                           <p className="text-sm text-muted-foreground truncate">
+                             {inventory.general_comments}
+                           </p>
+                         )}
                       </div>
                       <div className="flex justify-end space-x-2 mt-4">
                         <Button 

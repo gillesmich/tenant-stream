@@ -16,6 +16,8 @@ interface Inventory {
   inventory_type: "entree" | "sortie";
   rooms: Room[];
   general_comments?: string;
+  tenant_phone?: string;
+  tenant_name?: string;
   properties?: {
     title: string;
     address: string;
@@ -52,7 +54,7 @@ export function InventoryDisplay({ inventory }: InventoryDisplayProps) {
       {/* Header */}
       <div className="text-center border-b pb-6">
         <h1 className="text-3xl font-bold print:text-2xl">État des lieux</h1>
-        <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+        <div className="mt-4 grid grid-cols-1 md:grid-cols-4 gap-4 text-sm">
           <div>
             <Label className="font-semibold">Propriété:</Label>
             <p>{inventory.properties?.title || "Lieu du bien"}</p>
@@ -65,6 +67,12 @@ export function InventoryDisplay({ inventory }: InventoryDisplayProps) {
             <Label className="font-semibold">Date:</Label>
             <p>{new Date(inventory.inventory_date).toLocaleDateString('fr-FR')}</p>
           </div>
+          {inventory.tenant_name && (
+            <div>
+              <Label className="font-semibold">Locataire:</Label>
+              <p>{inventory.tenant_name}</p>
+            </div>
+          )}
         </div>
         <div className="mt-4">
           <Badge variant={inventory.inventory_type === 'entree' ? 'default' : 'secondary'} className="text-sm">

@@ -9,6 +9,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Camera, Plus, Trash2 } from "lucide-react";
@@ -61,6 +62,7 @@ export function InventoryForm({ onSubmit, initialData, onCancel }: InventoryForm
   const [photoFiles, setPhotoFiles] = useState<{ [key: number]: File[] }>({});
   const [existingPhotos, setExistingPhotos] = useState<{ [key: number]: string[] }>({});
   const [deletedPhotos, setDeletedPhotos] = useState<string[]>([]); // Track photos to delete from storage
+  const [properties, setProperties] = useState<any[]>([]);
   const { user } = useAuth();
 
   const form = useForm<InventoryFormData>({
@@ -79,6 +81,27 @@ export function InventoryForm({ onSubmit, initialData, onCancel }: InventoryForm
       generalComments: "",
     }
   });
+
+  // Load properties on component mount
+  useEffect(() => {
+    if (user) {
+      fetchProperties();
+    }
+  }, [user]);
+
+  const fetchProperties = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('properties')
+        .select('id, title, address')
+        .eq('owner_id', user?.id);
+
+      if (error) throw error;
+      setProperties(data || []);
+    } catch (error) {
+      console.error('Error fetching properties:', error);
+    }
+  };
 
   // Load initial data when component mounts or initialData changes
   useEffect(() => {
@@ -109,6 +132,15 @@ export function InventoryForm({ onSubmit, initialData, onCancel }: InventoryForm
       }
     }
   }, [initialData, form]);
+
+  const handlePropertySelect = (propertyId: string) => {
+    const selectedProperty = properties.find(p => p.id === propertyId);
+    if (selectedProperty) {
+      form.setValue('propertyId', propertyId);
+      form.setValue('propertyName', selectedProperty.title);
+      form.setValue('propertyAddress', selectedProperty.address);
+    }
+  };
 
   const { fields, append, remove } = useFieldArray({
     control: form.control,
@@ -261,6 +293,25 @@ export function InventoryForm({ onSubmit, initialData, onCancel }: InventoryForm
               <CardTitle>Informations générales</CardTitle>
             </CardHeader>
             <CardContent className="grid gap-4">
+              <div className="space-y-4">
+                <Label>Sélectionner une propriété</Label>
+                <Select onValueChange={handlePropertySelect}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Choisir dans mes propriétés" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {properties.map((property) => (
+                      <SelectItem key={property.id} value={property.id}>
+                        {property.title} - {property.address}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-sm text-muted-foreground">
+                  Ou remplissez manuellement les champs ci-dessous
+                </p>
+              </div>
+
               <FormField
                 control={form.control}
                 name="propertyName"

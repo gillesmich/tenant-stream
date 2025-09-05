@@ -40,6 +40,20 @@ serve(async (req) => {
       .eq('id', inventoryId)
       .single();
 
+    // Fetch tenant name if tenant_phone exists
+    let tenantName = null;
+    if (inventory?.tenant_phone) {
+      const { data: tenant } = await supabase
+        .from('tenants')
+        .select('first_name, last_name')
+        .eq('phone', inventory.tenant_phone)
+        .single();
+      
+      if (tenant) {
+        tenantName = `${tenant.first_name} ${tenant.last_name}`;
+      }
+    }
+
     if (error || !inventory) {
       console.error('Error fetching inventory:', error);
       return new Response(
@@ -63,7 +77,7 @@ serve(async (req) => {
     }
 
     // Generate HTML content
-    const htmlContent = generateInventoryHTML(inventory);
+    const htmlContent = generateInventoryHTML(inventory, tenantName);
 
     // Generate PDF from HTML
     const pdfBytes = generatePDFFromHTML(htmlContent);
@@ -97,7 +111,7 @@ function validateInventoryData(inventory: any): boolean {
   );
 }
 
-function generateInventoryHTML(inventory: any): string {
+function generateInventoryHTML(inventory: any, tenantName?: string | null): string {
   const property = inventory.properties;
   const rooms = inventory.rooms || [];
   
@@ -131,6 +145,7 @@ function generateInventoryHTML(inventory: any): string {
         <p><strong>Date:</strong> ${new Date(inventory.inventory_date).toLocaleDateString('fr-FR')}</p>
         <p><strong>Propriété:</strong> ${property?.title || 'Non spécifiée'}</p>
         <p><strong>Adresse:</strong> ${property?.address || 'Non spécifiée'}</p>
+        ${tenantName ? `<p><strong>Locataire:</strong> ${tenantName}</p>` : ''}
         ${property?.surface ? `<p><strong>Surface:</strong> ${property.surface} m²</p>` : ''}
         ${property?.property_type ? `<p><strong>Type:</strong> ${property.property_type}</p>` : ''}
       </div>

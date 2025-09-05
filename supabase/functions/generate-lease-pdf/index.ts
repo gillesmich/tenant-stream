@@ -107,64 +107,128 @@ async function fillPDFTemplate(templateUrl: string, lease: any): Promise<Uint8Ar
     const pdfDoc = await PDFDocument.load(templateBuffer);
     const form = pdfDoc.getForm();
     
-    // Mapper les données vers les champs du formulaire PDF
-    const fieldMappings = {
-      // Informations locataire
+    // Mapper les données vers les champs du formulaire PDF avec variations de nommage
+    const fieldMappings: Record<string, string> = {
+      // Informations locataire - variations possibles
       'tenant_first_name': lease.tenants?.first_name || '',
       'tenant_last_name': lease.tenants?.last_name || '',
       'tenant_name': `${lease.tenants?.first_name || ''} ${lease.tenants?.last_name || ''}`.trim(),
+      'locataire_nom': `${lease.tenants?.first_name || ''} ${lease.tenants?.last_name || ''}`.trim(),
+      'locataire_prenom': lease.tenants?.first_name || '',
+      'locataire_nom_famille': lease.tenants?.last_name || '',
       'tenant_email': lease.tenants?.email || '',
+      'locataire_email': lease.tenants?.email || '',
       'tenant_phone': lease.tenants?.phone || '',
+      'locataire_telephone': lease.tenants?.phone || '',
       'tenant_birth_date': lease.tenants?.birth_date ? new Date(lease.tenants.birth_date).toLocaleDateString('fr-FR') : '',
+      'locataire_naissance': lease.tenants?.birth_date ? new Date(lease.tenants.birth_date).toLocaleDateString('fr-FR') : '',
       
-      // Informations propriété
+      // Informations propriété - variations possibles
       'property_address': lease.properties?.address || '',
+      'propriete_adresse': lease.properties?.address || '',
+      'adresse_bien': lease.properties?.address || '',
+      'property_title': lease.properties?.title || '',
+      'propriete_nom': lease.properties?.title || '',
       'property_city': lease.properties?.city || '',
+      'propriete_ville': lease.properties?.city || '',
       'property_postal_code': lease.properties?.postal_code || '',
+      'code_postal': lease.properties?.postal_code || '',
       'property_type': lease.properties?.property_type || '',
+      'type_bien': lease.properties?.property_type || '',
       'property_surface': lease.properties?.surface?.toString() || '',
+      'surface': lease.properties?.surface?.toString() || '',
       'property_rooms': lease.properties?.rooms?.toString() || '',
+      'nb_pieces': lease.properties?.rooms?.toString() || '',
       'property_bedrooms': lease.properties?.bedrooms?.toString() || '',
+      'nb_chambres': lease.properties?.bedrooms?.toString() || '',
       'property_furnished': lease.properties?.furnished ? 'Oui' : 'Non',
+      'meuble': lease.properties?.furnished ? 'Oui' : 'Non',
       
-      // Informations bail
+      // Informations bail - variations possibles
       'lease_type': lease.lease_type || '',
+      'type_bail': lease.lease_type || '',
       'start_date': new Date(lease.start_date).toLocaleDateString('fr-FR'),
+      'date_debut': new Date(lease.start_date).toLocaleDateString('fr-FR'),
+      'date_entree': new Date(lease.start_date).toLocaleDateString('fr-FR'),
       'end_date': lease.end_date ? new Date(lease.end_date).toLocaleDateString('fr-FR') : '',
+      'date_fin': lease.end_date ? new Date(lease.end_date).toLocaleDateString('fr-FR') : '',
+      'date_sortie': lease.end_date ? new Date(lease.end_date).toLocaleDateString('fr-FR') : '',
       'rent_amount': lease.rent_amount?.toString() || '',
+      'loyer': lease.rent_amount?.toString() || '',
+      'montant_loyer': lease.rent_amount?.toString() || '',
       'charges_amount': lease.charges_amount?.toString() || '0',
+      'charges': lease.charges_amount?.toString() || '0',
+      'montant_charges': lease.charges_amount?.toString() || '0',
       'deposit_amount': lease.deposit_amount?.toString() || '',
+      'depot_garantie': lease.deposit_amount?.toString() || '',
+      'caution': lease.deposit_amount?.toString() || '',
       'total_amount': (parseFloat(lease.rent_amount || 0) + parseFloat(lease.charges_amount || 0)).toString(),
+      'loyer_total': (parseFloat(lease.rent_amount || 0) + parseFloat(lease.charges_amount || 0)).toString(),
       
-      // Notes
+      // Notes et observations
       'notes': lease.notes || '',
+      'observations': lease.notes || '',
+      'remarques': lease.notes || '',
+      'conditions_particulieres': lease.notes || '',
       
       // Dates système
       'creation_date': new Date().toLocaleDateString('fr-FR'),
-      'signature_date': new Date().toLocaleDateString('fr-FR')
+      'date_creation': new Date().toLocaleDateString('fr-FR'),
+      'signature_date': new Date().toLocaleDateString('fr-FR'),
+      'date_signature': new Date().toLocaleDateString('fr-FR'),
+      'today': new Date().toLocaleDateString('fr-FR'),
+      'aujourdhui': new Date().toLocaleDateString('fr-FR'),
+      
+      // Durée du bail calculée
+      'duree_bail': lease.end_date ? 
+        Math.ceil((new Date(lease.end_date).getTime() - new Date(lease.start_date).getTime()) / (1000 * 3600 * 24 * 30)) + ' mois' :
+        'Indéterminée'
     };
     
     // Remplir les champs du formulaire
     const fields = form.getFields();
     console.log(`Template contient ${fields.length} champs`);
     
+    // Liste des champs trouvés pour debug
+    const foundFields = fields.map(f => f.getName());
+    console.log('Champs disponibles dans le template:', foundFields);
+    
+    let filledCount = 0;
     fields.forEach(field => {
       const fieldName = field.getName();
-      const value = fieldMappings[fieldName as keyof typeof fieldMappings];
+      const value = fieldMappings[fieldName];
       
-      if (value !== undefined) {
+      if (value !== undefined && value !== '') {
         try {
           if (field.constructor.name === 'PDFTextField') {
             (field as any).setText(value);
+            filledCount++;
+            console.log(`✓ Champ texte rempli: ${fieldName} = "${value}"`);
           } else if (field.constructor.name === 'PDFCheckBox') {
-            (field as any).check(value === 'Oui' || value === 'true');
+            const isChecked = value === 'Oui' || value === 'true' || value === '1';
+            (field as any).check(isChecked);
+            filledCount++;
+            console.log(`✓ Case cochée: ${fieldName} = ${isChecked}`);
+          } else if (field.constructor.name === 'PDFDropdown') {
+            try {
+              (field as any).select(value);
+              filledCount++;
+              console.log(`✓ Liste déroulante: ${fieldName} = "${value}"`);
+            } catch {
+              console.warn(`⚠ Valeur non trouvée dans la liste déroulante ${fieldName}: ${value}`);
+            }
+          } else {
+            console.warn(`⚠ Type de champ non supporté: ${field.constructor.name} pour ${fieldName}`);
           }
-          console.log(`Champ rempli: ${fieldName} = ${value}`);
         } catch (fieldError) {
-          console.warn(`Erreur lors du remplissage du champ ${fieldName}:`, fieldError);
+          console.error(`❌ Erreur lors du remplissage du champ ${fieldName}:`, fieldError);
         }
+      } else {
+        console.log(`⚪ Champ non mappé ou vide: ${fieldName}`);
       }
     });
+    
+    console.log(`Résumé: ${filledCount}/${fields.length} champs remplis avec succès`);
     
     // Optionnel: aplatir le formulaire pour empêcher les modifications
     // form.flatten();

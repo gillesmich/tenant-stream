@@ -124,9 +124,23 @@ export function InventoryForm({ onSubmit, initialData, onCancel }: InventoryForm
   // Load initial data when component mounts or initialData changes
   useEffect(() => {
     if (initialData) {
+      // If we have a propertyId, find the property info
+      let propertyInfo = null;
+      if (initialData.propertyId && properties.length > 0) {
+        propertyInfo = properties.find(p => p.id === initialData.propertyId);
+      }
+
+      // If we have tenant_phone, find the tenant info
+      let tenantInfo = null;
+      if (initialData.tenantPhone && tenants.length > 0) {
+        tenantInfo = tenants.find(t => t.phone === initialData.tenantPhone);
+      }
+
       form.reset({
-        propertyName: initialData.propertyName || "",
-        propertyAddress: initialData.propertyAddress || "",
+        propertyId: initialData.propertyId || "",
+        propertyName: propertyInfo?.title || initialData.propertyName || "",
+        propertyAddress: propertyInfo?.address || initialData.propertyAddress || "",
+        tenantPhone: initialData.tenantPhone || "",
         date: initialData.date || new Date().toISOString().split('T')[0],
         type: initialData.type || "entree",
         rooms: initialData.rooms || defaultRooms.map(name => ({
@@ -149,7 +163,7 @@ export function InventoryForm({ onSubmit, initialData, onCancel }: InventoryForm
         setExistingPhotos(existingPhotosMap);
       }
     }
-  }, [initialData, form]);
+  }, [initialData, form, properties, tenants]);
 
   const handlePropertySelect = (propertyId: string) => {
     const selectedProperty = properties.find(p => p.id === propertyId);

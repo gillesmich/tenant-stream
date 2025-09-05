@@ -54,34 +54,97 @@ const getConditionColor = (condition: string) => {
 export function InventoryDisplay({ inventory }: InventoryDisplayProps) {
   const generatePDF = async () => {
     try {
-      const { data, error } = await supabase.functions.invoke('generate-inventory-pdf', {
-        body: { inventoryId: inventory.id }
-      });
-
-      if (error) {
-        console.error('Error generating PDF:', error);
-        toast.error("Erreur lors de la génération du PDF");
-        return;
+      // Generate PDF directly from displayed data
+      const htmlContent = generateInventoryHTML(inventory);
+      const printWindow = window.open('', '_blank');
+      if (printWindow) {
+        printWindow.document.write(htmlContent);
+        printWindow.document.close();
+        printWindow.print();
       }
-
-      // Create blob from response
-      const blob = new Blob([data], { type: 'application/pdf' });
-      const url = window.URL.createObjectURL(blob);
-      
-      // Create download link
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `etat-des-lieux-${inventory.id}.pdf`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(url);
-      
-      toast.success("PDF généré avec succès!");
+      toast.success("PDF ouvert pour impression!");
     } catch (error) {
       console.error('Error generating PDF:', error);
       toast.error("Erreur lors de la génération du PDF");
     }
+  };
+
+  const generateInventoryHTML = (inventory: Inventory) => {
+    const property = inventory.properties;
+    const rooms = inventory.rooms || [];
+    
+    return `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="UTF-8">
+        <title>État des Lieux</title>
+        <style>
+          body { font-family: Arial, sans-serif; margin: 0; padding: 20px; }
+          .header { text-align: center; margin-bottom: 30px; }
+          .section { margin-bottom: 20px; }
+          .room { margin-bottom: 15px; border: 1px solid #ddd; padding: 10px; }
+          .room-header { font-weight: bold; margin-bottom: 10px; }
+          .condition { padding: 2px 8px; border-radius: 4px; font-size: 12px; }
+          .condition-neuf { background-color: #22c55e; color: white; }
+          .condition-bon { background-color: #3b82f6; color: white; }
+          .condition-moyen { background-color: #f59e0b; color: white; }
+          .condition-mauvais { background-color: #ef4444; color: white; }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <h1>ÉTAT DES LIEUX</h1>
+          <h2>${inventory.inventory_type === 'entree' ? 'D\'ENTRÉE' : 'DE SORTIE'}</h2>
+        </div>
+        
+        <div class="section">
+          <h3>INFORMATIONS GÉNÉRALES</h3>
+          <p><strong>Date:</strong> ${new Date(inventory.inventory_date).toLocaleDateString('fr-FR')}</p>
+          <p><strong>Propriété:</strong> ${property?.title || 'Non spécifiée'}</p>
+          <p><strong>Adresse:</strong> ${property?.address || 'Non spécifiée'}</p>
+          ${inventory.tenant_name ? `<p><strong>Locataire:</strong> ${inventory.tenant_name}</p>` : ''}
+        </div>
+        
+        <div class="section">
+          <h3>DÉTAIL DES PIÈCES</h3>
+          ${rooms.map((room: any) => `
+            <div class="room">
+              <div class="room-header">
+                ${room.name}
+                <span class="condition condition-${room.condition}">
+                  ${getConditionLabel(room.condition)}
+                </span>
+              </div>
+              ${room.description ? `<p><strong>Description:</strong> ${room.description}</p>` : ''}
+              ${room.photos && room.photos.length > 0 ? `<p><strong>Photos:</strong> ${room.photos.length} photo(s) attachée(s)</p>` : ''}
+            </div>
+          `).join('')}
+        </div>
+        
+        ${inventory.general_comments ? `
+          <div class="section">
+            <h3>COMMENTAIRES GÉNÉRAUX</h3>
+            <p>${inventory.general_comments}</p>
+          </div>
+        ` : ''}
+        
+        <div class="section" style="margin-top: 40px;">
+          <p>Date de génération: ${new Date().toLocaleDateString('fr-FR')}</p>
+        </div>
+      </body>
+      </html>
+    `;
+  };
+
+  const getConditionLabel = (condition: string): string => {
+    const labels: { [key: string]: string } = {
+      'neuf': 'Neuf',
+      'bon': 'Bon état',
+      'moyen': 'État moyen',
+      'mauvais': 'Mauvais état'
+    };
+    return labels[condition] || condition;
   };
 
   return (

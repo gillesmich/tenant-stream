@@ -44,6 +44,7 @@ const inventorySchema = z.object({
   propertyName: z.string().min(1, "Le nom de la propriété est requis"),
   propertyAddress: z.string().min(1, "L'adresse de la propriété est requise"),
   propertyId: z.string().nullable().optional(),
+  tenantPhone: z.string().default(""),
   date: z.string().min(1, "La date est requise"),
   type: z.enum(["entree", "sortie"]).default("entree"),
   rooms: z.array(roomSchema).min(1, "Au moins une pièce est requise"),
@@ -63,6 +64,7 @@ export function InventoryForm({ onSubmit, initialData, onCancel }: InventoryForm
   const [existingPhotos, setExistingPhotos] = useState<{ [key: number]: string[] }>({});
   const [deletedPhotos, setDeletedPhotos] = useState<string[]>([]); // Track photos to delete from storage
   const [properties, setProperties] = useState<any[]>([]);
+  const [tenants, setTenants] = useState<any[]>([]);
   const { user } = useAuth();
 
   const form = useForm<InventoryFormData>({
@@ -70,6 +72,7 @@ export function InventoryForm({ onSubmit, initialData, onCancel }: InventoryForm
     defaultValues: {
       propertyName: "",
       propertyAddress: "",
+      tenantPhone: "",
       date: new Date().toISOString().split('T')[0],
       type: "entree",
       rooms: defaultRooms.map(name => ({
@@ -82,10 +85,11 @@ export function InventoryForm({ onSubmit, initialData, onCancel }: InventoryForm
     }
   });
 
-  // Load properties on component mount
+  // Load properties and tenants on component mount
   useEffect(() => {
     if (user) {
       fetchProperties();
+      fetchTenants();
     }
   }, [user]);
 
@@ -100,6 +104,20 @@ export function InventoryForm({ onSubmit, initialData, onCancel }: InventoryForm
       setProperties(data || []);
     } catch (error) {
       console.error('Error fetching properties:', error);
+    }
+  };
+
+  const fetchTenants = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('tenants')
+        .select('id, first_name, last_name, email, phone')
+        .eq('owner_id', user?.id);
+
+      if (error) throw error;
+      setTenants(data || []);
+    } catch (error) {
+      console.error('Error fetching tenants:', error);
     }
   };
 
@@ -139,6 +157,13 @@ export function InventoryForm({ onSubmit, initialData, onCancel }: InventoryForm
       form.setValue('propertyId', propertyId);
       form.setValue('propertyName', selectedProperty.title);
       form.setValue('propertyAddress', selectedProperty.address);
+    }
+  };
+
+  const handleTenantSelect = (tenantId: string) => {
+    const selectedTenant = tenants.find(t => t.id === tenantId);
+    if (selectedTenant) {
+      form.setValue('tenantPhone', selectedTenant.phone || '');
     }
   };
 
@@ -334,6 +359,36 @@ export function InventoryForm({ onSubmit, initialData, onCancel }: InventoryForm
                     <FormLabel>Adresse de la propriété</FormLabel>
                     <FormControl>
                       <Input placeholder="Adresse complète du bien" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <div className="space-y-4">
+                <Label>Sélectionner un locataire</Label>
+                <Select onValueChange={handleTenantSelect}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Choisir dans mes locataires" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {tenants.map((tenant) => (
+                      <SelectItem key={tenant.id} value={tenant.id}>
+                        {tenant.first_name} {tenant.last_name} {tenant.email && `- ${tenant.email}`}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <FormField
+                control={form.control}
+                name="tenantPhone"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Téléphone du locataire</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Numéro de téléphone" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

@@ -40,6 +40,8 @@ const roomSchema = z.object({
 });
 
 const inventorySchema = z.object({
+  propertyName: z.string().min(1, "Le nom de la propriété est requis"),
+  propertyAddress: z.string().min(1, "L'adresse de la propriété est requise"),
   propertyId: z.string().nullable().optional(),
   date: z.string().min(1, "La date est requise"),
   type: z.enum(["entree", "sortie"]).default("entree"),
@@ -64,6 +66,8 @@ export function InventoryForm({ onSubmit, initialData, onCancel }: InventoryForm
   const form = useForm<InventoryFormData>({
     resolver: zodResolver(inventorySchema),
     defaultValues: {
+      propertyName: "",
+      propertyAddress: "",
       date: new Date().toISOString().split('T')[0],
       type: "entree",
       rooms: defaultRooms.map(name => ({
@@ -80,6 +84,8 @@ export function InventoryForm({ onSubmit, initialData, onCancel }: InventoryForm
   useEffect(() => {
     if (initialData) {
       form.reset({
+        propertyName: initialData.propertyName || "",
+        propertyAddress: initialData.propertyAddress || "",
         date: initialData.date || new Date().toISOString().split('T')[0],
         type: initialData.type || "entree",
         rooms: initialData.rooms || defaultRooms.map(name => ({
@@ -254,15 +260,15 @@ export function InventoryForm({ onSubmit, initialData, onCancel }: InventoryForm
             <CardHeader>
               <CardTitle>Informations générales</CardTitle>
             </CardHeader>
-            <CardContent className="grid gap-4 md:grid-cols-2">
+            <CardContent className="grid gap-4">
               <FormField
                 control={form.control}
-                name="date"
+                name="propertyName"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Date</FormLabel>
+                    <FormLabel>Nom de la propriété</FormLabel>
                     <FormControl>
-                      <Input type="date" {...field} />
+                      <Input placeholder="Ex: Appartement T3, Villa..." {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -271,30 +277,60 @@ export function InventoryForm({ onSubmit, initialData, onCancel }: InventoryForm
               
               <FormField
                 control={form.control}
-                name="type"
+                name="propertyAddress"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Type d'état des lieux</FormLabel>
+                    <FormLabel>Adresse de la propriété</FormLabel>
                     <FormControl>
-                      <RadioGroup
-                        onValueChange={field.onChange}
-                        value={field.value}
-                        className="flex flex-row space-x-4"
-                      >
-                        <div className="flex items-center space-x-2">
-                          <RadioGroupItem value="entree" id="entree" />
-                          <Label htmlFor="entree">Entrée</Label>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <RadioGroupItem value="sortie" id="sortie" />
-                          <Label htmlFor="sortie">Sortie</Label>
-                        </div>
-                      </RadioGroup>
+                      <Input placeholder="Adresse complète du bien" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
+              
+              <div className="grid gap-4 md:grid-cols-2">
+                <FormField
+                  control={form.control}
+                  name="date"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Date</FormLabel>
+                      <FormControl>
+                        <Input type="date" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={form.control}
+                  name="type"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Type d'état des lieux</FormLabel>
+                      <FormControl>
+                        <RadioGroup
+                          onValueChange={field.onChange}
+                          value={field.value}
+                          className="flex flex-row space-x-4"
+                        >
+                          <div className="flex items-center space-x-2">
+                            <RadioGroupItem value="entree" id="entree" />
+                            <Label htmlFor="entree">Entrée</Label>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <RadioGroupItem value="sortie" id="sortie" />
+                            <Label htmlFor="sortie">Sortie</Label>
+                          </div>
+                        </RadioGroup>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
             </CardContent>
           </Card>
 
@@ -488,7 +524,26 @@ export function InventoryForm({ onSubmit, initialData, onCancel }: InventoryForm
           </Card>
 
           <div className="flex justify-end space-x-4">
-            <Button type="button" variant="outline" onClick={() => { form.reset(); toast.info('Modification annulée'); onCancel?.(); }}>
+            <Button type="button" variant="outline" onClick={() => { 
+              form.reset({
+                propertyName: "",
+                propertyAddress: "",
+                date: new Date().toISOString().split('T')[0],
+                type: "entree",
+                rooms: defaultRooms.map(name => ({
+                  name,
+                  description: "",
+                  condition: "bon" as const,
+                  photos: []
+                })),
+                generalComments: "",
+              }); 
+              setPhotoFiles({}); 
+              setExistingPhotos({}); 
+              setDeletedPhotos([]); 
+              toast.info('Formulaire réinitialisé'); 
+              onCancel?.(); 
+            }}>
               Annuler
             </Button>
             <Button type="submit" disabled={form.formState.isSubmitting}>

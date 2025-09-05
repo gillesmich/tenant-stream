@@ -15,7 +15,7 @@ interface PDFTemplate {
 }
 
 interface PDFTemplateManagerProps {
-  onTemplateSelect: (templateUrl: string | null) => void;
+  onTemplateSelect: (templateUrl: string | null, templateName?: string | null) => void;
   selectedTemplate: string | null;
 }
 
@@ -137,7 +137,7 @@ export const PDFTemplateManager = ({ onTemplateSelect, selectedTemplate }: PDFTe
 
       loadTemplates();
       if (selectedTemplate === template.file_url) {
-        onTemplateSelect(null);
+        onTemplateSelect(null, null);
       }
     } catch (error: any) {
       toast({
@@ -223,7 +223,7 @@ export const PDFTemplateManager = ({ onTemplateSelect, selectedTemplate }: PDFTe
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => onTemplateSelect(null)}
+              onClick={() => onTemplateSelect(null, null)}
               className={selectedTemplate === null ? "bg-muted" : ""}
             >
               Générer PDF classique
@@ -251,8 +251,8 @@ export const PDFTemplateManager = ({ onTemplateSelect, selectedTemplate }: PDFTe
                     size="sm"
                     variant={selectedTemplate === template.file_url ? "default" : "outline"}
                     onClick={() => {
-                      console.log('Template sélectionné:', template.file_url);
-                      onTemplateSelect(template.file_url);
+                      console.log('Template sélectionné:', template.file_url, template.title);
+                      onTemplateSelect(template.file_url, template.title);
                     }}
                   >
                     {selectedTemplate === template.file_url ? "Sélectionné" : "Utiliser"}

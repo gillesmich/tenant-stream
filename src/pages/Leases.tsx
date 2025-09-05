@@ -29,6 +29,13 @@ const Leases = () => {
       return null;
     }
   });
+  const [selectedTemplateName, setSelectedTemplateName] = useState<string | null>(() => {
+    try {
+      return localStorage.getItem('leaseTemplateName');
+    } catch {
+      return null;
+    }
+  });
   const [showTemplateManager, setShowTemplateManager] = useState(false);
 
   useEffect(() => {
@@ -82,7 +89,7 @@ const Leases = () => {
 
   const generatePDF = async (leaseId: string) => {
     try {
-      console.log('Génération PDF avec template:', selectedTemplate);
+      console.log('Génération PDF avec template:', selectedTemplate, 'nom:', selectedTemplateName);
       
       // Open a preview tab immediately to avoid popup blockers and show progress
       const preview = window.open('', '_blank');
@@ -94,7 +101,18 @@ const Leases = () => {
         });
         return;
       }
-      preview.document.write('<!doctype html><title>Génération du PDF…</title><body style="font-family:sans-serif;padding:16px"><p>Génération du PDF du bail…</p><p>Veuillez patienter.</p></body>');
+      preview.document.write(`
+        <!doctype html>
+        <title>Génération du PDF…</title>
+        <body style="font-family:sans-serif;padding:16px">
+          <p>Génération du PDF du bail…</p>
+          ${selectedTemplate && selectedTemplateName ? 
+            `<p>Utilisation du template: <strong>${selectedTemplateName}</strong></p>` : 
+            '<p>Utilisation du format standard</p>'
+          }
+          <p>Veuillez patienter.</p>
+        </body>
+      `);
 
       const { data: sessionData } = await supabase.auth.getSession();
       const token = sessionData?.session?.access_token || '';
@@ -208,7 +226,7 @@ const Leases = () => {
               onClick={() => setShowTemplateManager(!showTemplateManager)}
             >
               <Settings className="w-4 h-4 mr-2" />
-              Templates PDF
+              Templates PDF {selectedTemplateName && `(${selectedTemplateName})`}
             </Button>
             <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
               <DialogTrigger asChild>
@@ -240,14 +258,61 @@ const Leases = () => {
           <div className="mb-6">
             <PDFTemplateManager
               selectedTemplate={selectedTemplate}
-              onTemplateSelect={(url) => {
+              onTemplateSelect={(url, name) => {
                 setSelectedTemplate(url);
+                setSelectedTemplateName(name);
                 try {
-                  if (url) localStorage.setItem('leaseTemplateUrl', url);
-                  else localStorage.removeItem('leaseTemplateUrl');
+                  if (url) {
+                    localStorage.setItem('leaseTemplateUrl', url);
+                    localStorage.setItem('leaseTemplateName', name || '');
+                  } else {
+                    localStorage.removeItem('leaseTemplateUrl');
+                    localStorage.removeItem('leaseTemplateName');
+                  }
                 } catch {}
+                
+                // Afficher un message de confirmation
+                if (url && name) {
+                  toast({
+                    title: "Template sélectionné",
+                    description: `Le template "${name}" sera utilisé pour générer les PDFs de bail`,
+                  });
+                } else {
+                  toast({
+                    title: "Template désélectionné", 
+                    description: "Les PDFs seront générés avec le format standard",
+                  });
+                }
               }}
             />
+          </div>
+        )}
+
+        {/* Affichage du template actuel */}
+        {selectedTemplate && selectedTemplateName && (
+          <div className="mb-4 p-3 bg-muted/50 rounded-lg border border-border">
+            <div className="flex items-center gap-2">
+              <FileText className="w-4 h-4 text-primary" />
+              <span className="text-sm">
+                <strong>Template actuel :</strong> {selectedTemplateName}
+              </span>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setSelectedTemplate(null);
+                  setSelectedTemplateName(null);
+                  localStorage.removeItem('leaseTemplateUrl');
+                  localStorage.removeItem('leaseTemplateName');
+                  toast({
+                    title: "Template supprimé",
+                    description: "Les PDFs seront générés avec le format standard",
+                  });
+                }}
+              >
+                Supprimer
+              </Button>
+            </div>
           </div>
         )}
 

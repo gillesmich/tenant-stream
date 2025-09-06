@@ -117,9 +117,22 @@ const Leases = () => {
       const { data: sessionData } = await supabase.auth.getSession();
       const token = sessionData?.session?.access_token || '';
 
+      // Générer une URL signée si on a un chemin de template (bucket privé)
+      let effectiveTemplateUrl: string | null = null;
+      if (selectedTemplate) {
+        if (selectedTemplate.startsWith('http')) {
+          effectiveTemplateUrl = selectedTemplate;
+        } else {
+          const { data: signed } = await supabase.storage
+            .from('documents')
+            .createSignedUrl(selectedTemplate, 180);
+          effectiveTemplateUrl = signed?.signedUrl || null;
+        }
+      }
+
       const requestBody = { 
         leaseId,
-        templateUrl: selectedTemplate 
+        templateUrl: effectiveTemplateUrl 
       };
       console.log('Request body:', requestBody);
 

@@ -31,12 +31,18 @@ export const PDFTemplateManager = ({ onTemplateSelect, selectedTemplate }: PDFTe
 
   const loadTemplates = async () => {
     try {
-      const { data, error } = await supabase
+      const { data: authData } = await supabase.auth.getUser();
+      const userId = authData?.user?.id;
+
+      const query = supabase
         .from('documents')
         .select('*')
-        .eq('document_type', 'autre')
-        .ilike('title', '%template%')
+        .in('document_type', ['lease_template', 'autre'])
         .order('created_at', { ascending: false });
+
+      const { data, error } = userId
+        ? await query.eq('owner_id', userId)
+        : await query;
 
       if (error) throw error;
       setTemplates(data || []);
@@ -72,20 +78,16 @@ export const PDFTemplateManager = ({ onTemplateSelect, selectedTemplate }: PDFTe
 
       if (uploadError) throw uploadError;
 
-      // Get public URL
-      const { data: { publicUrl } } = supabase.storage
-        .from('documents')
-        .getPublicUrl(fileName);
+      // Enregistrer un enregistrement de document (chemin stocké, bucket privé)
+      const filePath = fileName; // chemin dans le bucket 'documents'
 
-      // Get current user (already done above)
-      // Save template record
       const { error: insertError } = await supabase
         .from('documents')
         .insert({
-          title: file.name.replace('.pdf', ''),
-          document_type: 'autre',
+          title: file.name.replace(/\.pdf$/i, ''),
+          document_type: 'lease_template',
           file_name: file.name,
-          file_url: publicUrl,
+          file_url: filePath,
           file_size: file.size,
           mime_type: file.type,
           owner_id: user.id,
@@ -120,15 +122,11 @@ export const PDFTemplateManager = ({ onTemplateSelect, selectedTemplate }: PDFTe
 
       if (error) throw error;
 
-      // Also delete from storage
-      const fileName = template.file_url.split('/').pop();
-      if (fileName) {
-        const { data: { user } } = await supabase.auth.getUser();
-        const filePath = user ? `${user.id}/${fileName}` : fileName;
-        await supabase.storage
-          .from('documents')
-          .remove([filePath]);
-      }
+    // Also delete from storage
+    const filePath = template.file_url;
+    await supabase.storage
+      .from('documents')
+      .remove([filePath]);
 
       toast({
         title: "Succès",
@@ -260,7 +258,19 @@ export const PDFTemplateManager = ({ onTemplateSelect, selectedTemplate }: PDFTe
                   <Button
                     size="sm"
                     variant="ghost"
-                    onClick={() => window.open(template.file_url, '_blank')}
+                    onClick={async () => {
+                      try {
+                        const { data, error } = await supabase.storage
+                          .from('documents')
+                          .createSignedUrl(template.file_url, 600);
+                        if (error) throw error;
+                        if (data?.signedUrl) {
+                          window.open(data.signedUrl, '_blank');
+                        }
+                      } catch (e: any) {
+                        toast({ title: 'Erreur', description: "Impossible d'ouvrir le template", variant: 'destructive' });
+                      }
+                    }}
                   >
                     <Download className="h-4 w-4" />
                   </Button>

@@ -89,18 +89,27 @@ const Rents = () => {
 
   const downloadReceipt = async (rentId: string) => {
     try {
-      const { data, error } = await supabase.functions.invoke('generate-rent-receipt', {
-        body: { 
+      const { data: sessionData } = await supabase.auth.getSession();
+      const accessToken = sessionData?.session?.access_token;
+      const functionsUrl = `https://vbpyykdkaoktzuewbzzl.functions.supabase.co/generate-rent-receipt`;
+
+      const resp = await fetch(functionsUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/pdf',
+          'Authorization': `Bearer ${accessToken ?? ''}`,
+          'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZicHl5a2RrYW9rdHp1ZXdienpsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTYyNzA2MTQsImV4cCI6MjA3MTg0NjYxNH0.FIh_pXKyNfeR2qm8my6bLENe-8HwM7hrEckNwaKR9s4'
+        },
+        body: JSON.stringify({
           rentId,
           templateUrl: selectedTemplate,
-          templateName: selectedTemplateName
-        }
+          templateName: selectedTemplateName,
+        })
       });
 
-      if (error) throw error;
-
-      // Create a blob from the response and trigger download
-      const blob = new Blob([data], { type: 'application/pdf' });
+      if (!resp.ok) throw new Error('PDF generation failed');
+      const blob = await resp.blob();
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
@@ -111,19 +120,18 @@ const Rents = () => {
       document.body.removeChild(a);
 
       toast({
-        title: "Succès",
-        description: "Quittance téléchargée avec succès",
+        title: 'Succès',
+        description: 'Quittance téléchargée avec succès',
       });
     } catch (error) {
       console.error('Error downloading receipt:', error);
       toast({
-        title: "Erreur",
+        title: 'Erreur',
         description: "Impossible de télécharger la quittance",
-        variant: "destructive",
+        variant: 'destructive',
       });
     }
   };
-
   const sendReceiptByEmail = async (rentId: string) => {
     try {
       const { data, error } = await supabase.functions.invoke('send-rent-receipt', {
@@ -154,36 +162,39 @@ const Rents = () => {
 
   const viewReceipt = async (rentId: string) => {
     try {
-      const { data, error } = await supabase.functions.invoke('generate-rent-receipt', {
-        body: { 
+      const { data: sessionData } = await supabase.auth.getSession();
+      const accessToken = sessionData?.session?.access_token;
+      const functionsUrl = `https://vbpyykdkaoktzuewbzzl.functions.supabase.co/generate-rent-receipt`;
+
+      const resp = await fetch(functionsUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/pdf',
+          'Authorization': `Bearer ${accessToken ?? ''}`,
+          'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZicHl5a2RrYW9rdHp1ZXdienpsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTYyNzA2MTQsImV4cCI6MjA3MTg0NjYxNH0.FIh_pXKyNfeR2qm8my6bLENe-8HwM7hrEckNwaKR9s4'
+        },
+        body: JSON.stringify({
           rentId,
           templateUrl: selectedTemplate,
-          templateName: selectedTemplateName
-        }
+          templateName: selectedTemplateName,
+        })
       });
 
-      if (error) throw error;
-
-      // Create a blob from the response and open in new tab
-      const blob = new Blob([data], { type: 'application/pdf' });
+      if (!resp.ok) throw new Error('PDF generation failed');
+      const blob = await resp.blob();
       const url = window.URL.createObjectURL(blob);
       window.open(url, '_blank');
-      
-      // Clean up the URL after a short delay
-      setTimeout(() => {
-        window.URL.revokeObjectURL(url);
-      }, 100);
-
+      setTimeout(() => window.URL.revokeObjectURL(url), 5000);
     } catch (error) {
       console.error('Error viewing receipt:', error);
       toast({
-        title: "Erreur",
+        title: 'Erreur',
         description: "Impossible d'afficher la quittance",
-        variant: "destructive",
+        variant: 'destructive',
       });
     }
   };
-
   const createNewRent = async () => {
     try {
       // Récupérer tous les baux (actifs ou non)

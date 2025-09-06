@@ -173,20 +173,37 @@ const Leases = () => {
 
   const sendLease = async (leaseId: string) => {
     try {
-      const { error } = await supabase.functions.invoke('send-lease-notification', {
-        body: { leaseId }
+      // Préparer une URL signée si un template privé est sélectionné
+      let effectiveTemplateUrl: string | null = null;
+      if (selectedTemplate) {
+        if (selectedTemplate.startsWith('http')) {
+          effectiveTemplateUrl = selectedTemplate;
+        } else {
+          const { data: signed } = await supabase.storage
+            .from('documents')
+            .createSignedUrl(selectedTemplate, 180);
+          effectiveTemplateUrl = signed?.signedUrl || null;
+        }
+      }
+
+      const { data, error } = await supabase.functions.invoke('send-lease-email', {
+        body: { leaseId, templateUrl: effectiveTemplateUrl }
       });
 
       if (error) throw error;
 
       toast({
-        title: "Bail envoyé",
-        description: "Le bail a été envoyé au locataire",
+        title: "Email envoyé",
+        description: "Le bail PDF a été envoyé au locataire.",
       });
+
+      // Recharger les baux pour mettre à jour le statut éventuel
+      loadLeases();
     } catch (error: any) {
+      console.error('Erreur envoi bail:', error);
       toast({
         title: "Erreur",
-        description: "Impossible d'envoyer le bail",
+        description: error?.message ?? "Impossible d'envoyer le bail",
         variant: "destructive",
       });
     }

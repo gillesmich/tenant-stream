@@ -68,23 +68,35 @@ const TenantDocuments = () => {
     if (!user) return;
 
     try {
-      // Récupérer les baux liés au locataire par email
+      // Récupérer les baux liés au locataire par email ou téléphone
       const userProfile = await supabase
         .from('profiles')
-        .select('email')
+        .select('email, phone')
         .eq('user_id', user.id)
-        .single();
+        .maybeSingle();
 
-      if (userProfile.data?.email) {
-        const { data, error } = await supabase
+      const email = userProfile.data?.email || undefined;
+      const phone = userProfile.data?.phone || undefined;
+
+      if (email || phone) {
+        let orFilters: string[] = [];
+        if (phone) orFilters.push(`tenant_phone.eq.${phone}`);
+        if (email) orFilters.push(`tenants.email.eq.${email}`);
+
+        let query = supabase
           .from('leases')
           .select(`
             *,
             properties (title, address),
             tenants (first_name, last_name, email)
           `)
-          .or(`tenant_phone.eq.${userProfile.data.email},tenants.email.eq.${userProfile.data.email}`)
           .order('created_at', { ascending: false });
+
+        if (orFilters.length > 0) {
+          query = query.or(orFilters.join(','));
+        }
+
+        const { data, error } = await query;
 
         if (error) throw error;
         setLeases(data || []);

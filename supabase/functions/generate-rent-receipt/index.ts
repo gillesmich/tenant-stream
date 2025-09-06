@@ -12,7 +12,7 @@ serve(async (req) => {
   }
 
   try {
-    const { rentId } = await req.json()
+    const { rentId, templateUrl, templateName } = await req.json()
 
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
@@ -49,8 +49,16 @@ serve(async (req) => {
       )
     }
 
-    const htmlContent = generateReceiptHTML(rent)
-    const pdfBuffer = generatePDFFromHTML(htmlContent)
+    let pdfBuffer: Uint8Array
+
+    if (templateUrl) {
+      // Use custom template
+      pdfBuffer = await generatePDFFromTemplate(supabaseClient, templateUrl, rent)
+    } else {
+      // Use default HTML generation
+      const htmlContent = generateReceiptHTML(rent)
+      pdfBuffer = generatePDFFromHTML(htmlContent)
+    }
 
     return new Response(pdfBuffer, {
       headers: {
@@ -176,6 +184,34 @@ function numberToWords(num: number): string {
   }
   
   return String(num)
+}
+
+async function generatePDFFromTemplate(supabaseClient: any, templateUrl: string, rent: any): Promise<Uint8Array> {
+  try {
+    // Download the template from storage
+    const { data: templateData, error } = await supabaseClient.storage
+      .from('documents')
+      .download(templateUrl)
+
+    if (error) {
+      console.error('Error downloading template:', error)
+      throw new Error('Failed to download template')
+    }
+
+    // For now, return the original template
+    // In a real implementation, you would:
+    // 1. Parse the PDF template
+    // 2. Fill in the data fields with rent information
+    // 3. Generate the final PDF
+    const arrayBuffer = await templateData.arrayBuffer()
+    return new Uint8Array(arrayBuffer)
+
+  } catch (error) {
+    console.error('Error processing template:', error)
+    // Fallback to default generation
+    const htmlContent = generateReceiptHTML(rent)
+    return generatePDFFromHTML(htmlContent)
+  }
 }
 
 function generatePDFFromHTML(htmlContent: string): Uint8Array {

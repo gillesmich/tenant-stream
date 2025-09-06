@@ -4,11 +4,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Search, Euro, Calendar, Mail, AlertTriangle, CheckCircle, Download } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Plus, Search, Euro, Calendar, Mail, AlertTriangle, CheckCircle, Download, Settings } from "lucide-react";
 import Navigation from "@/components/ui/navigation";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
+import { RentReceiptTemplateManager } from "@/components/RentReceiptTemplateManager";
 
 const Rents = () => {
   const { user } = useAuth();
@@ -17,6 +19,8 @@ const Rents = () => {
   const [statusFilter, setStatusFilter] = useState("all");
   const [rents, setRents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null);
+  const [selectedTemplateName, setSelectedTemplateName] = useState<string | null>(null);
 
   useEffect(() => {
     if (user) {
@@ -86,7 +90,11 @@ const Rents = () => {
   const downloadReceipt = async (rentId: string) => {
     try {
       const { data, error } = await supabase.functions.invoke('generate-rent-receipt', {
-        body: { rentId }
+        body: { 
+          rentId,
+          templateUrl: selectedTemplate,
+          templateName: selectedTemplateName
+        }
       });
 
       if (error) throw error;
@@ -260,13 +268,35 @@ const Rents = () => {
             <h1 className="text-3xl font-bold mb-2">Gestion des Loyers</h1>
             <p className="text-muted-foreground">Suivez les paiements et générez les quittances</p>
           </div>
-          <Button 
-            className="bg-gradient-primary"
-            onClick={() => createNewRent()}
-          >
-            <Plus className="w-4 h-4 mr-2" />
-            Nouveau loyer
-          </Button>
+          <div className="flex gap-2">
+            <Dialog>
+              <DialogTrigger asChild>
+                <Button variant="outline">
+                  <Settings className="w-4 h-4 mr-2" />
+                  Templates
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-2xl">
+                <DialogHeader>
+                  <DialogTitle>Gestion des Templates de Quittance</DialogTitle>
+                </DialogHeader>
+                <RentReceiptTemplateManager
+                  onTemplateSelect={(templateUrl, templateName) => {
+                    setSelectedTemplate(templateUrl);
+                    setSelectedTemplateName(templateName);
+                  }}
+                  selectedTemplate={selectedTemplate}
+                />
+              </DialogContent>
+            </Dialog>
+            <Button 
+              className="bg-gradient-primary"
+              onClick={() => createNewRent()}
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              Nouveau loyer
+            </Button>
+          </div>
         </div>
 
         {/* Statistiques */}

@@ -187,17 +187,22 @@ function numberToWords(num: number): string {
 
 async function generatePDFFromTemplate(supabaseClient: any, templateUrl: string, rent: any): Promise<Uint8Array> {
   try {
-    console.log('Using template URL:', templateUrl)
-    
-    // Extract the file path from the full URL
-    const urlParts = templateUrl.split('/object/public/documents/')
-    if (urlParts.length !== 2) {
-      console.error('Invalid template URL format:', templateUrl)
-      throw new Error('Invalid template URL format')
+    console.log('Using template identifier:', templateUrl)
+
+    // Determine storage file path (supports both public URL and direct storage path)
+    let filePath = templateUrl
+    if (templateUrl.startsWith('http')) {
+      const marker = '/object/public/documents/'
+      const parts = templateUrl.split(marker)
+      if (parts.length === 2) {
+        filePath = parts[1]
+      } else {
+        console.error('Invalid public URL format for template:', templateUrl)
+        throw new Error('Invalid template URL format')
+      }
     }
-    
-    const filePath = urlParts[1]
-    console.log('Extracted file path:', filePath)
+
+    console.log('Resolved storage file path:', filePath)
 
     // Download the template from storage
     const { data: templateData, error } = await supabaseClient.storage
@@ -216,16 +221,13 @@ async function generatePDFFromTemplate(supabaseClient: any, templateUrl: string,
 
     console.log('Template downloaded successfully, size:', templateData.size)
 
-    // For PDF templates, we'll return the template as-is for now
-    // In a production environment, you would use a PDF manipulation library
-    // to fill form fields or overlay text on the PDF
+    // Return template as-is for now (no form fill yet)
     const arrayBuffer = await templateData.arrayBuffer()
     return new Uint8Array(arrayBuffer)
 
   } catch (error) {
     console.error('Error processing template:', error)
     console.log('Falling back to default HTML generation')
-    // Fallback to default generation
     const htmlContent = generateReceiptHTML(rent)
     return generatePDFFromHTML(htmlContent)
   }

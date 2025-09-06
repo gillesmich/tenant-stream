@@ -81,7 +81,7 @@ export const PDFTemplateManager = ({ onTemplateSelect, selectedTemplate }: PDFTe
       // Enregistrer un enregistrement de document (chemin stocké, bucket privé)
       const filePath = fileName; // chemin dans le bucket 'documents'
 
-      const { error: insertError } = await supabase
+      const { data: inserted, error: insertError } = await supabase
         .from('documents')
         .insert({
           title: file.name.replace(/\.pdf$/i, ''),
@@ -91,16 +91,21 @@ export const PDFTemplateManager = ({ onTemplateSelect, selectedTemplate }: PDFTe
           file_size: file.size,
           mime_type: file.type,
           owner_id: user.id,
-        });
+        })
+        .select()
+        .single();
 
       if (insertError) throw insertError;
 
+      // Sélectionner automatiquement le template nouvellement uploadé
+      onTemplateSelect(inserted.file_url, inserted.title);
+
       toast({
         title: "Succès",
-        description: "Template uploadé avec succès",
+        description: `Template "${inserted.title}" uploadé et sélectionné`,
       });
 
-      loadTemplates();
+      await loadTemplates();
       setUploadingFile(null);
     } catch (error: any) {
       toast({

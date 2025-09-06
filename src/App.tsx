@@ -19,6 +19,7 @@ import CautionInvitation from "./pages/CautionInvitation";
 import TenantCautionRequests from "./pages/TenantCautionRequests";
 import LeaseValidation from "./pages/LeaseValidation";
 import TenantDashboard from "./pages/TenantDashboard";
+import TenantDocuments from "./pages/TenantDocuments";
 import NotFound from "./pages/NotFound";
 import { CommandPalette } from "./components/CommandPalette";
 
@@ -96,6 +97,16 @@ const App = () => (
               </ProtectedRoute>
             } />
             <Route path="/lease-validation/:leaseId" element={<LeaseValidation />} />
+            <Route path="/tenant-documents" element={
+              <ProtectedRoute>
+                <TenantDocuments />
+              </ProtectedRoute>
+            } />
+            <Route path="/tenant-caution-requests" element={
+              <ProtectedRoute>
+                <TenantCautionRequests />
+              </ProtectedRoute>
+            } />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

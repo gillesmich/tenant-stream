@@ -6,18 +6,30 @@ import { useLocation, Link } from "react-router-dom";
 
 const Navigation = () => {
   const [isOpen, setIsOpen] = useState(false);
-  const { signOut, user } = useAuth();
+  const { signOut, user, userRole } = useAuth();
 
-  const navItems = [
+  // Navigation pour les propriétaires
+  const ownerNavItems = [
     { name: "Dashboard", href: "/", icon: Home },
     { name: "Propriétés", href: "/properties", icon: Home },
     { name: "Locataires", href: "/tenants", icon: Users },
     { name: "Baux", href: "/leases", icon: FileText },
     { name: "États des lieux", href: "/inventories", icon: ClipboardList },
     { name: "Loyers", href: "/rents", icon: DollarSign },
+    { name: "Documents", href: "/documents", icon: FileText },
     { name: "Cautions", href: "/cautions", icon: Shield },
     { name: "Paramètres", href: "/settings", icon: Settings },
-];
+  ];
+
+  // Navigation pour les locataires
+  const tenantNavItems = [
+    { name: "Dashboard", href: "/tenant-dashboard", icon: Home },
+    { name: "Mes Documents", href: "/tenant-documents", icon: FileText },
+    { name: "Demandes de caution", href: "/tenant-caution-requests", icon: Shield },
+    { name: "Paramètres", href: "/settings", icon: Settings },
+  ];
+
+  const navItems = userRole === 'locataire' ? tenantNavItems : ownerNavItems;
 
   const location = useLocation();
   console.log('Navigation: Current pathname:', location.pathname);

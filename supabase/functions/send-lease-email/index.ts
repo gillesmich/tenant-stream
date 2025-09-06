@@ -119,6 +119,31 @@ serve(async (req) => {
       console.error("Erreur MAJ statut bail:", updateError);
     }
 
+    // Créer un document dans la base de données pour le PDF envoyé
+    try {
+      const { error: docError } = await supabaseAdmin
+        .from('documents')
+        .insert({
+          title: `Contrat de location - ${lease.properties?.title || 'Propriété'}`,
+          document_type: 'contrat_location',
+          owner_id: lease.owner_id,
+          lease_id: leaseId,
+          property_id: lease.property_id,
+          file_url: `${SUPABASE_URL}/functions/v1/generate-lease-pdf?leaseId=${leaseId}`,
+          auto_generated: true,
+          source_type: 'lease_pdf'
+        });
+
+      if (docError) {
+        console.error("Error creating document:", docError);
+      } else {
+        console.log("Document created successfully for lease PDF");
+      }
+    } catch (docCreateError) {
+      console.error("Error creating document:", docCreateError);
+      // Ne pas faire échouer l'envoi d'email si la création du document échoue
+    }
+
     return new Response(
       JSON.stringify({ success: true, message: "Email envoyé", emailId: (email as any)?.id ?? null }),
       { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }

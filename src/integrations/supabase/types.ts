@@ -106,6 +106,7 @@ export type Database = {
       }
       documents: {
         Row: {
+          auto_generated: boolean | null
           created_at: string
           document_type: string
           file_name: string | null
@@ -118,10 +119,12 @@ export type Database = {
           property_id: string | null
           signed: boolean | null
           signed_at: string | null
+          source_type: string | null
           title: string
           updated_at: string
         }
         Insert: {
+          auto_generated?: boolean | null
           created_at?: string
           document_type: string
           file_name?: string | null
@@ -134,10 +137,12 @@ export type Database = {
           property_id?: string | null
           signed?: boolean | null
           signed_at?: string | null
+          source_type?: string | null
           title: string
           updated_at?: string
         }
         Update: {
+          auto_generated?: boolean | null
           created_at?: string
           document_type?: string
           file_name?: string | null
@@ -150,6 +155,7 @@ export type Database = {
           property_id?: string | null
           signed?: boolean | null
           signed_at?: string | null
+          source_type?: string | null
           title?: string
           updated_at?: string
         }

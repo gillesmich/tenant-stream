@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.21.0'
+import { PDFDocument, StandardFonts, rgb } from 'https://esm.sh/pdf-lib@1.17.1'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -221,9 +222,39 @@ async function generatePDFFromTemplate(supabaseClient: any, templateUrl: string,
 
     console.log('Template downloaded successfully, size:', templateData.size)
 
-    // Return template as-is for now (no form fill yet)
-    const arrayBuffer = await templateData.arrayBuffer()
-    return new Uint8Array(arrayBuffer)
+    const templateBytes = new Uint8Array(await templateData.arrayBuffer())
+    const pdfDoc = await PDFDocument.load(templateBytes)
+    const font = await pdfDoc.embedFont(StandardFonts.Helvetica)
+
+    const page = pdfDoc.getPages()[0]
+    const { width, height } = page.getSize()
+
+    const property = rent.lease?.property || {}
+    const tenant = rent.lease?.tenant || {}
+    const periodStart = new Date(rent.period_start).toLocaleDateString('fr-FR')
+    const periodEnd = new Date(rent.period_end).toLocaleDateString('fr-FR')
+    const paidDate = rent.paid_date ? new Date(rent.paid_date).toLocaleDateString('fr-FR') : 'Non payé'
+
+    const left = 50
+    let y = height - 60
+
+    const lines = [
+      `Quittance de loyer`,
+      `${tenant.first_name || ''} ${tenant.last_name || ''}`.trim(),
+      `${property.address || ''}`.trim(),
+      `Période: ${periodStart} - ${periodEnd}`,
+      `Loyer: ${rent.rent_amount ?? 0}€  Charges: ${rent.charges_amount ?? 0}€  Total: ${rent.total_amount ?? 0}€`,
+      `Paiement: ${paidDate}`
+    ]
+
+    lines.forEach((text, idx) => {
+      if (text && String(text).trim().length > 0) {
+        page.drawText(String(text), { x: left, y: y - idx * 16, size: idx === 0 ? 14 : 11, font, color: rgb(0, 0, 0) })
+      }
+    })
+
+    const pdfBytes = await pdfDoc.save()
+    return pdfBytes
 
   } catch (error) {
     console.error('Error processing template:', error)

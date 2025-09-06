@@ -154,31 +154,31 @@ const Rents = () => {
 
   const createNewRent = async () => {
     try {
-      // Récupérer les baux actifs
-      const { data: activeLeases, error } = await supabase
+      // Récupérer tous les baux (actifs ou non)
+      const { data: allLeases, error } = await supabase
         .from('leases')
         .select(`
           id,
           rent_amount,
           charges_amount,
+          status,
           properties (title),
           tenants (first_name, last_name)
         `)
-        .eq('owner_id', user?.id)
-        .eq('status', 'actif');
+        .eq('owner_id', user?.id);
 
       if (error) throw error;
 
-      if (!activeLeases || activeLeases.length === 0) {
+      if (!allLeases || allLeases.length === 0) {
         toast({
-          title: "Aucun bail actif",
-          description: "Vous devez avoir au moins un bail actif pour créer un loyer",
+          title: "Aucun bail trouvé",
+          description: "Vous devez avoir au moins un bail pour créer un loyer",
           variant: "destructive",
         });
         return;
       }
 
-      // Pour le moment, créer automatiquement les loyers pour tous les baux actifs pour le mois suivant
+      // Pour le moment, créer automatiquement les loyers pour tous les baux pour le mois suivant
       const nextMonth = new Date();
       nextMonth.setMonth(nextMonth.getMonth() + 1);
       const year = nextMonth.getFullYear();
@@ -188,7 +188,7 @@ const Rents = () => {
       const endDate = new Date(year, month + 1, 0);
       const dueDate = new Date(year, month, 5); // Échéance le 5 du mois
 
-      const rentsToCreate = activeLeases.map(lease => ({
+      const rentsToCreate = allLeases.map(lease => ({
         lease_id: lease.id,
         owner_id: user?.id,
         period_start: startDate.toISOString().split('T')[0],

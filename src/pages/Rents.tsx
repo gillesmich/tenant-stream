@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Plus, Search, Euro, Calendar, Mail, AlertTriangle, CheckCircle, Download, Settings } from "lucide-react";
+import { Plus, Search, Euro, Calendar, Mail, AlertTriangle, CheckCircle, Download, Settings, Send } from "lucide-react";
 import Navigation from "@/components/ui/navigation";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -119,6 +119,34 @@ const Rents = () => {
       toast({
         title: "Erreur",
         description: "Impossible de télécharger la quittance",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const sendReceiptByEmail = async (rentId: string) => {
+    try {
+      const { data, error } = await supabase.functions.invoke('send-rent-receipt', {
+        body: { 
+          rentId,
+          templateUrl: selectedTemplate,
+          templateName: selectedTemplateName
+        }
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Succès",
+        description: "Quittance envoyée par email et sauvegardée dans les documents",
+      });
+
+      fetchRents(); // Refresh to update receipt_sent status
+    } catch (error: any) {
+      console.error('Error sending receipt:', error);
+      toast({
+        title: "Erreur",
+        description: error.message || "Impossible d'envoyer la quittance",
         variant: "destructive",
       });
     }
@@ -392,33 +420,44 @@ const Rents = () => {
                       )}
                     </div>
                     
-                    <div className="flex space-x-2">
+                     <div className="flex space-x-2">
                        {rent.status === "paye" && (
-                        <Button 
-                          variant="outline" 
-                          size="sm"
-                          onClick={() => downloadReceipt(rent.id)}
-                        >
-                          <Download className="w-4 h-4 mr-1" />
-                          Quittance
-                        </Button>
-                      )}
-                      {rent.status !== "paye" && (
-                        <Button variant="outline" size="sm">
-                          <Mail className="w-4 h-4 mr-1" />
-                          Relancer
-                        </Button>
-                      )}
-                      {rent.status !== "paye" && (
-                        <Button 
-                          variant="default" 
-                          size="sm"
-                          onClick={() => markAsPaid(rent.id)}
-                        >
-                          Marquer payé
-                        </Button>
-                      )}
-                    </div>
+                         <>
+                           <Button 
+                             variant="outline" 
+                             size="sm"
+                             onClick={() => downloadReceipt(rent.id)}
+                           >
+                             <Download className="w-4 h-4 mr-1" />
+                             Télécharger
+                           </Button>
+                           <Button 
+                             variant="outline" 
+                             size="sm"
+                             onClick={() => sendReceiptByEmail(rent.id)}
+                             disabled={rent.receipt_sent}
+                           >
+                             <Send className="w-4 h-4 mr-1" />
+                             {rent.receipt_sent ? "Envoyée" : "Envoyer"}
+                           </Button>
+                         </>
+                       )}
+                       {rent.status !== "paye" && (
+                         <Button variant="outline" size="sm">
+                           <Mail className="w-4 h-4 mr-1" />
+                           Relancer
+                         </Button>
+                       )}
+                       {rent.status !== "paye" && (
+                         <Button 
+                           variant="default" 
+                           size="sm"
+                           onClick={() => markAsPaid(rent.id)}
+                         >
+                           Marquer payé
+                         </Button>
+                       )}
+                     </div>
                   </div>
                 </div>
               </CardContent>

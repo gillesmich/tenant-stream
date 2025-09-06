@@ -209,6 +209,31 @@ const Leases = () => {
     }
   };
 
+  const sendValidationCode = async (leaseId: string) => {
+    try {
+      const { data, error } = await supabase.functions.invoke('send-lease-validation-code', {
+        body: { leaseId }
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Code envoyé",
+        description: "Le code de validation a été envoyé au locataire par email.",
+      });
+
+      // Recharger les baux pour mettre à jour le statut
+      loadLeases();
+    } catch (error: any) {
+      console.error('Erreur envoi code validation:', error);
+      toast({
+        title: "Erreur",
+        description: error?.message ?? "Impossible d'envoyer le code de validation",
+        variant: "destructive",
+      });
+    }
+  };
+
   const filteredLeases = leases.filter(lease => {
     const propertyName = lease.properties?.title || '';
     const tenantName = `${lease.tenants?.first_name || ''} ${lease.tenants?.last_name || ''}`.trim();
@@ -439,15 +464,26 @@ const Leases = () => {
                     PDF
                   </Button>
                   {!(lease.signed_by_tenant && lease.signed_by_owner) && (
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      className="flex-1"
-                      onClick={() => sendLease(lease.id)}
-                    >
-                      <Send className="w-4 h-4 mr-1" />
-                      Envoyer
-                    </Button>
+                    <>
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="flex-1"
+                        onClick={() => sendLease(lease.id)}
+                      >
+                        <Send className="w-4 h-4 mr-1" />
+                        Envoyer PDF
+                      </Button>
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="flex-1"
+                        onClick={() => sendValidationCode(lease.id)}
+                      >
+                        <Send className="w-4 h-4 mr-1" />
+                        Code validation
+                      </Button>
+                    </>
                   )}
                   <Button 
                     variant="default" 

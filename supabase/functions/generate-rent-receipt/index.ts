@@ -226,23 +226,126 @@ async function generatePDFFromTemplate(supabaseClient: any, templateUrl: string,
     const pdfDoc = await PDFDocument.load(templateBytes)
     const font = await pdfDoc.embedFont(StandardFonts.Helvetica)
 
-    const page = pdfDoc.getPages()[0]
-    const { width, height } = page.getSize()
-
     const property = rent.lease?.property || {}
     const tenant = rent.lease?.tenant || {}
-    const periodStart = new Date(rent.period_start).toLocaleDateString('fr-FR')
-    const periodEnd = new Date(rent.period_end).toLocaleDateString('fr-FR')
+    const periodStart = new Date(rent.period_start)
+    const periodEnd = new Date(rent.period_end)
     const paidDate = rent.paid_date ? new Date(rent.paid_date).toLocaleDateString('fr-FR') : 'Non payé'
 
+    // Try to fill AcroForm fields if present
+    try {
+      const form = pdfDoc.getForm()
+      const fields = form.getFields()
+      console.log('PDF form fields detected:', fields.map((f: any) => f.getName()))
+
+      // If there are fields, attempt intelligent mapping based on field names
+      if (fields.length > 0) {
+        // Fetch owner profile for landlord name
+        let ownerName = ''
+        try {
+          const { data: ownerProfile } = await supabaseClient
+            .from('profiles')
+            .select('first_name,last_name,company')
+            .eq('user_id', rent.owner_id ?? rent.lease?.owner_id)
+            .single()
+          if (ownerProfile) {
+            ownerName = ownerProfile.company || [ownerProfile.first_name, ownerProfile.last_name].filter(Boolean).join(' ')
+          }
+        } catch (e) {
+          console.log('Owner profile lookup failed, continuing without:', e?.message || e)
+        }
+
+        const monthLabel = periodStart.toLocaleString('fr-FR', { month: 'long', year: 'numeric' })
+        const amount = (n: any) => Number(n ?? 0).toLocaleString('fr-FR', { style: 'currency', currency: 'EUR' })
+
+        const values: Record<string, string> = {
+          locataire: `${tenant.first_name ?? ''} ${tenant.last_name ?? ''}`.trim(),
+          tenant: `${tenant.first_name ?? ''} ${tenant.last_name ?? ''}`.trim(),
+          bailleur: ownerName,
+          proprietaire: ownerName,
+          owner: ownerName,
+          landlord: ownerName,
+          adresse: property.address ?? '',
+          address: property.address ?? '',
+          ville: property.city ?? '',
+          city: property.city ?? '',
+          codepostal: property.postal_code ?? '',
+          postal: property.postal_code ?? '',
+          mois: monthLabel,
+          periode: `Du ${periodStart.toLocaleDateString('fr-FR')} au ${periodEnd.toLocaleDateString('fr-FR')}`,
+          month: monthLabel,
+          loyer: amount(rent.rent_amount),
+          rent: amount(rent.rent_amount),
+          charges: amount(rent.charges_amount),
+          total: amount(rent.total_amount),
+          date: new Date().toLocaleDateString('fr-FR'),
+          paiement: paidDate,
+        }
+
+        const setIfMatch = (fieldName: string) => {
+          const key = fieldName.toLowerCase().replace(/\s|_/g, '')
+          // Try direct match, then includes-based heuristics
+          const direct = Object.keys(values).find(k => key === k)
+          if (direct) return values[direct]
+          if (key.includes('locataire') || key.includes('tenant')) return values.locataire
+          if (key.includes('bailleur') || key.includes('proprietaire') || key.includes('owner') || key.includes('landlord')) return values.bailleur
+          if (key.includes('adresse') || key.includes('address')) return values.adresse
+          if (key.includes('ville') || key.includes('city')) return values.ville
+          if (key.includes('codepostal') || key.includes('postal') || key.includes('cp')) return values.codepostal
+          if (key.includes('periode') || key.includes('mois') || key.includes('month')) return values.periode
+          if (key.includes('loyer') || key.includes('rent')) return values.loyer
+          if (key.includes('charge')) return values.charges
+          if (key.includes('total')) return values.total
+          if (key.includes('date')) return values.date
+          if (key.includes('paiement') || key.includes('paid')) return values.paiement
+          return undefined
+        }
+
+        let filledCount = 0
+        for (const f of fields) {
+          const name = f.getName()
+          const val = setIfMatch(name)
+          if (val !== undefined) {
+            try {
+              // Prefer text fields
+              const tf = form.getTextField(name)
+              tf.setText(String(val))
+              filledCount++
+              console.log(`Filled field: ${name} -> ${val}`)
+            } catch (_) {
+              // Not a text field; ignore gracefully
+              console.log(`Skipped non-text field: ${name}`)
+            }
+          } else {
+            console.log(`No mapping for field: ${name}`)
+          }
+        }
+
+        // Update appearances and flatten to keep values visible everywhere
+        try { form.updateFieldAppearances(font) } catch (_) {}
+        try { form.flatten() } catch (_) {}
+
+        const pdfBytes = await pdfDoc.save()
+        if (filledCount > 0) return pdfBytes
+        console.log('Form detected but no fields mapped, falling back to simple overlay text')
+      } else {
+        console.log('No form fields detected, drawing simple overlay text')
+      }
+    } catch (e) {
+      console.log('No AcroForm or failed to process form fields, fallback to overlay text:', e?.message || e)
+    }
+
+    // Fallback overlay text rendering
+    const page = pdfDoc.getPages()[0]
+    const { height } = page.getSize()
     const left = 50
     let y = height - 60
 
     const lines = [
-      `Quittance de loyer`,
+      'Quittance de loyer',
       `${tenant.first_name || ''} ${tenant.last_name || ''}`.trim(),
       `${property.address || ''}`.trim(),
-      `Période: ${periodStart} - ${periodEnd}`,
+      `Période: ${periodStart.toLocaleDateString('fr-FR')} - ${periodEnd.toLocaleDateString('fr-FR')}`,
       `Loyer: ${rent.rent_amount ?? 0}€  Charges: ${rent.charges_amount ?? 0}€  Total: ${rent.total_amount ?? 0}€`,
       `Paiement: ${paidDate}`
     ]

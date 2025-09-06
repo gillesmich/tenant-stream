@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Plus, Search, Euro, Calendar, Mail, AlertTriangle, CheckCircle, Download, Settings, Send } from "lucide-react";
+import { Plus, Search, Euro, Calendar, Mail, AlertTriangle, CheckCircle, Download, Settings, Send, Eye } from "lucide-react";
 import Navigation from "@/components/ui/navigation";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -147,6 +147,38 @@ const Rents = () => {
       toast({
         title: "Erreur",
         description: error.message || "Impossible d'envoyer la quittance",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const viewReceipt = async (rentId: string) => {
+    try {
+      const { data, error } = await supabase.functions.invoke('generate-rent-receipt', {
+        body: { 
+          rentId,
+          templateUrl: selectedTemplate,
+          templateName: selectedTemplateName
+        }
+      });
+
+      if (error) throw error;
+
+      // Create a blob from the response and open in new tab
+      const blob = new Blob([data], { type: 'application/pdf' });
+      const url = window.URL.createObjectURL(blob);
+      window.open(url, '_blank');
+      
+      // Clean up the URL after a short delay
+      setTimeout(() => {
+        window.URL.revokeObjectURL(url);
+      }, 100);
+
+    } catch (error) {
+      console.error('Error viewing receipt:', error);
+      toast({
+        title: "Erreur",
+        description: "Impossible d'afficher la quittance",
         variant: "destructive",
       });
     }
@@ -421,6 +453,14 @@ const Rents = () => {
                     </div>
                     
                      <div className="flex space-x-2">
+                       <Button 
+                         variant="outline" 
+                         size="sm"
+                         onClick={() => viewReceipt(rent.id)}
+                       >
+                         <Eye className="w-4 h-4 mr-1" />
+                         Voir
+                       </Button>
                        {rent.status === "paye" && (
                          <>
                            <Button 

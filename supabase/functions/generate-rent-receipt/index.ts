@@ -84,8 +84,7 @@ function validateRentData(rent: any): boolean {
     rent.lease?.tenant?.last_name &&
     rent.period_start &&
     rent.period_end &&
-    rent.total_amount &&
-    rent.paid_date
+    rent.total_amount
   )
 }
 
@@ -94,7 +93,7 @@ function generateReceiptHTML(rent: any): string {
   const tenant = rent.lease.tenant
   const periodStart = new Date(rent.period_start).toLocaleDateString('fr-FR')
   const periodEnd = new Date(rent.period_end).toLocaleDateString('fr-FR')
-  const paidDate = new Date(rent.paid_date).toLocaleDateString('fr-FR')
+  const paidDate = rent.paid_date ? new Date(rent.paid_date).toLocaleDateString('fr-FR') : 'Non payé'
 
   return `
     <!DOCTYPE html>
@@ -145,7 +144,7 @@ function generateReceiptHTML(rent: any): string {
         </div>
 
         <div class="section">
-            <p>Je soussigné(e), propriétaire du logement désigné ci-dessus, reconnaît avoir reçu la somme de <strong>${rent.total_amount}€</strong> (${numberToWords(rent.total_amount)} euros) de Monsieur/Madame ${tenant.first_name} ${tenant.last_name}, locataire dudit logement, pour le paiement du loyer et charges de la période du ${periodStart} au ${periodEnd}.</p>
+            <p>Je soussigné(e), propriétaire du logement désigné ci-dessus, ${rent.paid_date ? 'reconnaît avoir reçu' : 'demande le paiement de'} la somme de <strong>${rent.total_amount}€</strong> (${numberToWords(rent.total_amount)} euros) ${rent.paid_date ? 'de' : 'à'} Monsieur/Madame ${tenant.first_name} ${tenant.last_name}, locataire dudit logement, pour ${rent.paid_date ? 'le paiement du' : 'le'} loyer et charges de la période du ${periodStart} au ${periodEnd}.</p>
         </div>
 
         <div class="footer">
@@ -188,26 +187,44 @@ function numberToWords(num: number): string {
 
 async function generatePDFFromTemplate(supabaseClient: any, templateUrl: string, rent: any): Promise<Uint8Array> {
   try {
+    console.log('Using template URL:', templateUrl)
+    
+    // Extract the file path from the full URL
+    const urlParts = templateUrl.split('/object/public/documents/')
+    if (urlParts.length !== 2) {
+      console.error('Invalid template URL format:', templateUrl)
+      throw new Error('Invalid template URL format')
+    }
+    
+    const filePath = urlParts[1]
+    console.log('Extracted file path:', filePath)
+
     // Download the template from storage
     const { data: templateData, error } = await supabaseClient.storage
       .from('documents')
-      .download(templateUrl)
+      .download(filePath)
 
     if (error) {
       console.error('Error downloading template:', error)
-      throw new Error('Failed to download template')
+      throw new Error('Failed to download template: ' + error.message)
     }
 
-    // For now, return the original template
-    // In a real implementation, you would:
-    // 1. Parse the PDF template
-    // 2. Fill in the data fields with rent information
-    // 3. Generate the final PDF
+    if (!templateData) {
+      console.error('No template data received')
+      throw new Error('No template data received')
+    }
+
+    console.log('Template downloaded successfully, size:', templateData.size)
+
+    // For PDF templates, we'll return the template as-is for now
+    // In a production environment, you would use a PDF manipulation library
+    // to fill form fields or overlay text on the PDF
     const arrayBuffer = await templateData.arrayBuffer()
     return new Uint8Array(arrayBuffer)
 
   } catch (error) {
     console.error('Error processing template:', error)
+    console.log('Falling back to default HTML generation')
     // Fallback to default generation
     const htmlContent = generateReceiptHTML(rent)
     return generatePDFFromHTML(htmlContent)
@@ -215,7 +232,9 @@ async function generatePDFFromTemplate(supabaseClient: any, templateUrl: string,
 }
 
 function generatePDFFromHTML(htmlContent: string): Uint8Array {
-  // Simple PDF generation - in production, use a proper PDF library
+  // Enhanced PDF generation with better formatting
+  const currentDate = new Date().toLocaleDateString('fr-FR')
+  
   const pdfHeader = `%PDF-1.4
 1 0 obj
 << /Type /Catalog /Pages 2 0 R >>
@@ -224,39 +243,46 @@ endobj
 << /Type /Pages /Kids [3 0 R] /Count 1 >>
 endobj
 3 0 obj
-<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 4 0 R /F2 5 0 R >> >> /Contents 6 0 R >>
 endobj
 4 0 obj
 << /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
 endobj
 5 0 obj
-<< /Length 6 0 R >>
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>
+endobj
+6 0 obj
+<< /Length 7 0 R >>
 stream
 BT
-/F1 12 Tf
-50 750 Td
+/F2 16 Tf
+200 750 Td
 (QUITTANCE DE LOYER) Tj
+0 -40 Td
+/F1 12 Tf
+(Document généré automatiquement le ${currentDate}) Tj
 0 -30 Td
-(Document génère automatiquement) Tj
+(Utilisez un template personnalisé pour plus de détails) Tj
 ET
 endstream
 endobj
-6 0 obj
-70
+7 0 obj
+200
 endobj
 xref
-0 7
+0 8
 0000000000 65535 f 
 0000000009 00000 n 
 0000000058 00000 n 
 0000000115 00000 n 
 0000000245 00000 n 
 0000000312 00000 n 
-0000000431 00000 n 
+0000000379 00000 n 
+0000000579 00000 n 
 trailer
-<< /Size 7 /Root 1 0 R >>
+<< /Size 8 /Root 1 0 R >>
 startxref
-450
+598
 %%EOF`
 
   return new TextEncoder().encode(pdfHeader)

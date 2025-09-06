@@ -5,7 +5,8 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Plus, Search, FileText, Calendar, Euro, Download, Send, Settings } from "lucide-react";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { Plus, Search, FileText, Calendar, Euro, Download, Send, Settings, Trash2 } from "lucide-react";
 import Navigation from "@/components/ui/navigation";
 import { LeaseForm } from "@/components/LeaseForm";
 import { PDFTemplateManager } from "@/components/PDFTemplateManager";
@@ -229,6 +230,32 @@ const Leases = () => {
       toast({
         title: "Erreur",
         description: error?.message ?? "Impossible d'envoyer le code de validation",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const deleteLease = async (leaseId: string) => {
+    try {
+      const { error } = await supabase
+        .from('leases')
+        .delete()
+        .eq('id', leaseId)
+        .eq('owner_id', user?.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Bail supprimé",
+        description: "Le bail a été supprimé avec succès.",
+      });
+
+      loadLeases();
+    } catch (error: any) {
+      console.error('Erreur suppression bail:', error);
+      toast({
+        title: "Erreur",
+        description: "Impossible de supprimer le bail",
         variant: "destructive",
       });
     }
@@ -493,6 +520,36 @@ const Leases = () => {
                   >
                     Modifier
                   </Button>
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="text-destructive hover:text-destructive"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Confirmer la suppression</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          Êtes-vous sûr de vouloir supprimer ce bail ? Cette action est irréversible.
+                          <br /><br />
+                          <strong>Bail :</strong> {lease.properties?.title || 'Propriété inconnue'} - {lease.tenants ? `${lease.tenants.first_name} ${lease.tenants.last_name}` : 'Locataire non assigné'}
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Annuler</AlertDialogCancel>
+                        <AlertDialogAction 
+                          className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                          onClick={() => deleteLease(lease.id)}
+                        >
+                          Supprimer
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
                 </div>
               </CardContent>
             </Card>

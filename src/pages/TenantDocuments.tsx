@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import Navigation from "@/components/ui/navigation";
 import { FileText, Download, PenTool, Clock, Eye, CheckCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -14,6 +15,8 @@ const TenantDocuments = () => {
   const [documents, setDocuments] = useState<any[]>([]);
   const [leases, setLeases] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [codes, setCodes] = useState<Record<string, string>>({});
+  const [validating, setValidating] = useState<Record<string, boolean>>({});
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -80,8 +83,8 @@ const TenantDocuments = () => {
 
       if (email || phone) {
         let orFilters: string[] = [];
-        if (phone) orFilters.push(`tenant_phone.eq.${phone}`);
-        if (email) orFilters.push(`tenants.email.eq.${email}`);
+        if (phone) orFilters.push(`tenant_phone.eq.${encodeURIComponent(phone)}`);
+        if (email) orFilters.push(`tenants.email.eq.${encodeURIComponent(email)}`);
 
         let query = supabase
           .from('leases')
@@ -103,6 +106,30 @@ const TenantDocuments = () => {
       }
     } catch (error) {
       console.error('Error loading leases:', error);
+    }
+  };
+
+  const handleInlineValidate = async (leaseId: string) => {
+    const code = (codes[leaseId] || "").trim();
+    if (code.length !== 6) {
+      toast({ title: "Code invalide", description: "Saisissez 6 chiffres", variant: "destructive" });
+      return;
+    }
+    setValidating((v) => ({ ...v, [leaseId]: true }));
+    try {
+      const { data, error } = await supabase.functions.invoke('validate-lease-code', {
+        body: { leaseId, validationCode: code }
+      });
+      if (error) throw error;
+      if (data?.success) {
+        toast({ title: "Contrat validé", description: "Le bail est maintenant actif" });
+        setCodes((c) => ({ ...c, [leaseId]: "" }));
+        await Promise.all([loadLeases(), loadDocuments()]);
+      }
+    } catch (e: any) {
+      toast({ title: "Erreur", description: e?.message || "Validation échouée", variant: "destructive" });
+    } finally {
+      setValidating((v) => ({ ...v, [leaseId]: false }));
     }
   };
 
@@ -171,12 +198,30 @@ const TenantDocuments = () => {
                       <p className="text-sm text-muted-foreground mb-4">
                         Vous avez reçu un code de validation par email pour finaliser ce contrat.
                       </p>
+                      <div className="flex items-center gap-2 mb-2">
+                        <Input
+                          placeholder="123456"
+                          value={codes[lease.id] || ''}
+                          onChange={(e) => setCodes((c) => ({ ...c, [lease.id]: e.target.value.replace(/\D/g, '').slice(0, 6) }))}
+                          className="text-center tracking-widest"
+                          maxLength={6}
+                          inputMode="numeric"
+                          pattern="[0-9]*"
+                        />
+                        <Button 
+                          onClick={() => handleInlineValidate(lease.id)}
+                          disabled={validating[lease.id] || (codes[lease.id] || '').length !== 6}
+                        >
+                          {validating[lease.id] ? 'Validation...' : 'Valider'}
+                        </Button>
+                      </div>
                       <Button 
                         onClick={() => handleValidateLease(lease.id)}
+                        variant="outline"
                         className="w-full"
                       >
                         <CheckCircle className="w-4 h-4 mr-2" />
-                        Valider le contrat
+                        Ouvrir la page de validation
                       </Button>
                     </CardContent>
                   </Card>
@@ -261,17 +306,36 @@ const TenantDocuments = () => {
                        doc.leases.tenant_validation_code && 
                        new Date(doc.leases.validation_expires_at) > new Date() && (
                         <div className="bg-orange-100 dark:bg-orange-950/30 p-2 rounded mt-2">
-                          <div className="text-xs text-orange-800 dark:text-orange-200 mb-1">
+                          <div className="text-xs text-orange-800 dark:text-orange-200 mb-2">
                             Contrat en attente de validation
                           </div>
-                          <Button 
-                            size="sm" 
-                            variant="outline"
-                            onClick={() => handleValidateLease(doc.leases.id)}
-                            className="text-xs h-7"
-                          >
-                            Valider maintenant
-                          </Button>
+                          <div className="flex items-center gap-2">
+                            <Input
+                              placeholder="123456"
+                              value={codes[doc.leases.id] || ''}
+                              onChange={(e) => setCodes((c) => ({ ...c, [doc.leases.id]: e.target.value.replace(/\D/g, '').slice(0, 6) }))}
+                              className="h-7 text-center text-xs tracking-widest"
+                              maxLength={6}
+                              inputMode="numeric"
+                              pattern="[0-9]*"
+                            />
+                            <Button 
+                              size="sm" 
+                              onClick={() => handleInlineValidate(doc.leases.id)}
+                              disabled={validating[doc.leases.id] || (codes[doc.leases.id] || '').length !== 6}
+                              className="h-7 text-xs"
+                            >
+                              {validating[doc.leases.id] ? '...' : 'Valider'}
+                            </Button>
+                            <Button 
+                              size="sm" 
+                              variant="outline"
+                              onClick={() => handleValidateLease(doc.leases.id)}
+                              className="h-7 text-xs"
+                            >
+                              Page
+                            </Button>
+                          </div>
                         </div>
                       )}
                       

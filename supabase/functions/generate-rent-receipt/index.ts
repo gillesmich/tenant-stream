@@ -54,7 +54,7 @@ serve(async (req) => {
 
     if (templateUrl) {
       // Use custom template
-      pdfBuffer = await generatePDFFromTemplate(supabaseClient, templateUrl, rent)
+      pdfBuffer = await generatePDFFromTemplate(supabaseClient, templateUrl, rent, templateName)
     } else {
       // Use default HTML generation
       const htmlContent = generateReceiptHTML(rent)
@@ -186,7 +186,7 @@ function numberToWords(num: number): string {
   return String(num)
 }
 
-async function generatePDFFromTemplate(supabaseClient: any, templateUrl: string, rent: any): Promise<Uint8Array> {
+async function generatePDFFromTemplate(supabaseClient: any, templateUrl: string, rent: any, templateName?: string): Promise<Uint8Array> {
   try {
     console.log('Using template identifier:', templateUrl)
 
@@ -318,6 +318,48 @@ async function generatePDFFromTemplate(supabaseClient: any, templateUrl: string,
             }
           } else {
             console.log(`No mapping for field: ${name}`)
+          }
+        }
+
+        // If nothing filled by name, try sequential fallback based on typical receipt order
+        if (filledCount === 0) {
+          console.log('No fields matched by name; applying sequential fallback mapping', { templateName })
+          const monthLabel = periodStart.toLocaleString('fr-FR', { month: 'long', year: 'numeric' })
+          const seqValues = [
+            // 1. Bailleur (owner)
+            (values.bailleur || ''),
+            // 2. Locataire (tenant)
+            (values.locataire || ''),
+            // 3. Adresse du bien
+            (values.adresse || ''),
+            // 4. Code postal
+            (values.codepostal || ''),
+            // 5. Ville
+            (values.ville || ''),
+            // 6. Mois/Période
+            (values.mois || monthLabel || ''),
+            // 7. Loyer
+            (values.loyer || ''),
+            // 8. Charges
+            (values.charges || ''),
+            // 9. Total
+            (values.total || ''),
+            // 10. Date
+            (values.date || ''),
+            // 11. Paiement (date ou statut)
+            (values.paiement || '')
+          ]
+          const allFields = form.getFields()
+          for (let i = 0; i < Math.min(seqValues.length, allFields.length); i++) {
+            const name = allFields[i].getName()
+            try {
+              const tf = form.getTextField(name)
+              tf.setText(String(seqValues[i] ?? ''))
+              filledCount++
+              console.log(`Sequentially filled field #${i + 1} (${name}) -> ${seqValues[i]}`)
+            } catch (_) {
+              console.log(`Skipped non-text field during sequential mapping: ${name}`)
+            }
           }
         }
 

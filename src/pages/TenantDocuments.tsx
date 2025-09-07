@@ -91,39 +91,59 @@ const TenantDocuments = () => {
     if (!user) return;
 
     try {
-      // Récupérer les baux liés au locataire par email ou téléphone
-      const userProfile = await supabase
+      // Récupérer les baux liés au locataire par email ou téléphone sans utiliser .or() (évite erreurs PostgREST)
+      const { data: userProfile, error: profileError } = await supabase
         .from('profiles')
         .select('email, phone')
         .eq('user_id', user.id)
         .maybeSingle();
 
-      const email = userProfile.data?.email || undefined;
-      const phone = userProfile.data?.phone || undefined;
+      if (profileError) throw profileError;
 
-      if (email || phone) {
-        let orFilters: string[] = [];
-        if (phone) orFilters.push(`tenant_phone.eq.${encodeURIComponent(phone)}`);
-        if (email) orFilters.push(`tenants.email.eq.${encodeURIComponent(email)}`);
+      const email = userProfile?.email || undefined;
+      const phone = userProfile?.phone || undefined;
 
-        let query = supabase
+      const results: any[] = [];
+
+      // 1) Par téléphone direct sur la table leases
+      if (phone) {
+        const { data: byPhone, error: errPhone } = await supabase
           .from('leases')
           .select(`
             *,
             properties (title, address),
             tenants (first_name, last_name, email)
           `)
+          .eq('tenant_phone', phone)
           .order('created_at', { ascending: false });
-
-        if (orFilters.length > 0) {
-          query = query.or(orFilters.join(','));
+        if (errPhone) {
+          console.warn('Leases (phone) error:', errPhone);
+        } else if (byPhone) {
+          results.push(...byPhone);
         }
-
-        const { data, error } = await query;
-
-        if (error) throw error;
-        setLeases(data || []);
       }
+
+      // 2) Par email via la relation tenants
+      if (email) {
+        const { data: byEmail, error: errEmail } = await supabase
+          .from('leases')
+          .select(`
+            *,
+            properties (title, address),
+            tenants (first_name, last_name, email)
+          `)
+          .eq('tenants.email', email)
+          .order('created_at', { ascending: false });
+        if (errEmail) {
+          console.warn('Leases (email) error:', errEmail);
+        } else if (byEmail) {
+          results.push(...byEmail);
+        }
+      }
+
+      // Dédupliquer par id
+      const unique = Array.from(new Map(results.map((l: any) => [l.id, l])).values());
+      setLeases(unique);
     } catch (error) {
       console.error('Error loading leases:', error);
     }

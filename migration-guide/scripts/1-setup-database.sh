@@ -45,7 +45,7 @@ EOF
 echo "📋 Creating essential tables..."
 
 # Create minimal schema (only essential tables)
-PGPASSWORD=$DB_PASSWORD psql -U $DB_USER -d $DB_NAME << 'EOF'
+PGPASSWORD=$DB_PASSWORD psql -h 127.0.0.1 -U $DB_USER -d $DB_NAME << 'EOF'
 -- Users/Profiles
 CREATE TABLE profiles (
   user_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

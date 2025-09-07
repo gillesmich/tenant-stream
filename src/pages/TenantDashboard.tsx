@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Navigation from "@/components/ui/navigation";
-import { FileText, Home, Calendar, Euro, Download, PenTool, Clock, Shield, CheckCircle, AlertCircle } from "lucide-react";
+import { FileText, Home, Calendar, Euro, Download, PenTool, Clock, Shield, CheckCircle, AlertCircle, User } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Link } from "react-router-dom";
 
@@ -377,7 +377,25 @@ const TenantDashboard = () => {
         </div>
 
         {/* Quick Actions */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+          <Card className="shadow-card hover:shadow-elegant transition-all duration-300">
+            <CardHeader>
+              <CardTitle className="flex items-center">
+                <User className="w-5 h-5 mr-2 text-primary" />
+                Mon profil
+              </CardTitle>
+              <CardDescription>
+                Gérer mes informations personnelles
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Button asChild className="w-full">
+                <Link to="/tenant-profile">
+                  Modifier mon profil
+                </Link>
+              </Button>
+            </CardContent>
+          </Card>
           <Card className="shadow-card hover:shadow-elegant transition-all duration-300">
             <CardHeader>
               <CardTitle className="flex items-center">

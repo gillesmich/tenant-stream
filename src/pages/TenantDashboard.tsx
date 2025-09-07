@@ -40,31 +40,45 @@ const TenantDashboard = () => {
         return;
       }
 
-      // Chercher les baux liés à cet utilisateur par email ou téléphone
-      let leaseQuery = supabase
-        .from('leases')
-        .select(`
-          *,
-          properties (*),
-          tenants (first_name, last_name, email)
-        `)
-        .order('created_at', { ascending: false });
-
-      // Construire les conditions OR pour email et téléphone
-      let orConditions = [];
-      if (userPhone) orConditions.push(`tenant_phone.eq.${encodeURIComponent(userPhone)}`);
-      if (userEmail) orConditions.push(`tenants.email.eq.${encodeURIComponent(userEmail)}`);
-
-      if (orConditions.length > 0) {
-        leaseQuery = leaseQuery.or(orConditions.join(','));
+      // Chercher les baux liés à cet utilisateur par email ou téléphone (sans utiliser .or pour éviter PGRST100)
+      const combined: any[] = [];
+      
+      if (userPhone) {
+        const { data: byPhone, error: errPhone } = await supabase
+          .from('leases')
+          .select(`
+            *,
+            properties (*),
+            tenants (first_name, last_name, email)
+          `)
+          .eq('tenant_phone', userPhone)
+          .order('created_at', { ascending: false });
+        if (errPhone) {
+          console.warn('Leases (phone) error:', errPhone);
+        } else if (byPhone) {
+          combined.push(...byPhone);
+        }
       }
-
-      const { data: leaseData, error: leaseError } = await leaseQuery;
-
-      if (leaseError) {
-        console.error('Error loading lease:', leaseError);
-        return;
+      
+      if (userEmail) {
+        const { data: byEmail, error: errEmail } = await supabase
+          .from('leases')
+          .select(`
+            *,
+            properties (*),
+            tenants (first_name, last_name, email)
+          `)
+          .eq('tenants.email', userEmail)
+          .order('created_at', { ascending: false });
+        if (errEmail) {
+          console.warn('Leases (email) error:', errEmail);
+        } else if (byEmail) {
+          combined.push(...byEmail);
+        }
       }
+      
+      // Dédupliquer par id
+      const leaseData = Array.from(new Map(combined.map((l: any) => [l.id, l])).values());
 
       // Prendre le bail le plus récent
       const activeLease = leaseData && leaseData.length > 0 ? leaseData[0] : null;

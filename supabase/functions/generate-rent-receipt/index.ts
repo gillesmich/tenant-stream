@@ -56,8 +56,8 @@ serve(async (req) => {
       // Use custom template
       pdfBuffer = await generatePDFFromTemplate(supabaseClient, templateUrl, rent, templateName)
     } else {
-      // Use default HTML generation
-      const htmlContent = generateReceiptHTML(rent)
+      // Use default HTML generation with owner data
+      const htmlContent = await generateReceiptHTMLWithOwnerData(supabaseClient, rent)
       pdfBuffer = await generatePDFFromHTML(htmlContent)
     }
 
@@ -110,9 +110,13 @@ function generateReceiptHTML(rent: any): string {
             .label { font-weight: bold; }
             .amount { font-size: 18px; font-weight: bold; }
             .footer { margin-top: 40px; text-align: right; }
+            .owner-data { display: none; } /* Hidden data for extraction */
         </style>
     </head>
     <body>
+        <!-- Hidden owner data for PDF generation -->
+        <div class="owner-data" data-owner-id="${rent.owner_id || rent.lease?.owner_id}"></div>
+        
         <div class="header">
             <h1 class="title">QUITTANCE DE LOYER</h1>
         </div>
@@ -157,6 +161,106 @@ function generateReceiptHTML(rent: any): string {
     </html>
   `
 }
+
+async function generateReceiptHTMLWithOwnerData(supabaseClient: any, rent: any): Promise<string> {
+  // Fetch owner profile for complete information
+  let ownerName = '[Nom du propriétaire]'
+  let ownerAddress = '[Adresse du propriétaire]'
+  
+  try {
+    const { data: ownerProfile } = await supabaseClient
+      .from('profiles')
+      .select('first_name,last_name,company,address_line1,address_line2,city,postal_code,country')
+      .eq('user_id', rent.owner_id ?? rent.lease?.owner_id)
+      .single()
+    
+    if (ownerProfile) {
+      ownerName = ownerProfile.company || [ownerProfile.first_name, ownerProfile.last_name].filter(Boolean).join(' ')
+      const addressParts = [
+        ownerProfile.address_line1,
+        ownerProfile.address_line2,
+        ownerProfile.postal_code,
+        ownerProfile.city,
+        ownerProfile.country
+      ].filter(Boolean)
+      ownerAddress = addressParts.join(', ')
+    }
+  } catch (e) {
+    console.log('Owner profile lookup failed, using defaults:', e?.message || e)
+  }
+
+  const property = rent.lease.property
+  const tenant = rent.lease.tenant
+  const periodStart = new Date(rent.period_start).toLocaleDateString('fr-FR')
+  const periodEnd = new Date(rent.period_end).toLocaleDateString('fr-FR')
+  const paidDate = rent.paid_date ? new Date(rent.paid_date).toLocaleDateString('fr-FR') : 'Non payé'
+
+  return `
+    <!DOCTYPE html>
+    <html lang="fr">
+    <head>
+        <meta charset="UTF-8">
+        <title>Quittance de Loyer</title>
+        <style>
+            body { font-family: Arial, sans-serif; margin: 20px; }
+            .header { text-align: center; margin-bottom: 30px; }
+            .title { font-size: 24px; font-weight: bold; margin-bottom: 20px; }
+            .section { margin-bottom: 20px; }
+            .label { font-weight: bold; }
+            .amount { font-size: 18px; font-weight: bold; }
+            .footer { margin-top: 40px; text-align: right; }
+            .owner-data { display: none; } /* Hidden data for extraction */
+        </style>
+    </head>
+    <body>
+        <!-- Hidden owner data for PDF generation -->
+        <div class="owner-data" 
+             data-owner-name="${ownerName}" 
+             data-owner-address="${ownerAddress}"></div>
+        
+        <div class="header">
+            <h1 class="title">QUITTANCE DE LOYER</h1>
+        </div>
+
+        <div class="section">
+            <h3>Propriétaire</h3>
+            <p>Nom/Société: ${ownerName}</p>
+            <p>Adresse: ${ownerAddress}</p>
+        </div>
+
+        <div class="section">
+            <h3>Locataire</h3>
+            <p><span class="label">Nom:</span> ${tenant.first_name} ${tenant.last_name}</p>
+        </div>
+
+        <div class="section">
+            <h3>Bien loué</h3>
+            <p><span class="label">Adresse:</span> ${property.address}</p>
+            <p><span class="label">Ville:</span> ${property.city} ${property.postal_code}</p>
+            <p><span class="label">Type:</span> ${property.property_type}</p>
+        </div>
+
+        <div class="section">
+            <h3>Détails du paiement</h3>
+            <p><span class="label">Période:</span> Du ${periodStart} au ${periodEnd}</p>
+            <p><span class="label">Date de paiement:</span> ${paidDate}</p>
+            <p><span class="label">Loyer:</span> ${rent.rent_amount}€</p>
+            ${rent.charges_amount > 0 ? `<p><span class="label">Charges:</span> ${rent.charges_amount}€</p>` : ''}
+            <p class="amount"><span class="label">Total payé:</span> ${rent.total_amount}€</p>
+        </div>
+
+        <div class="section">
+            <p>Je soussigné(e), propriétaire du logement désigné ci-dessus, ${rent.paid_date ? 'reconnaît avoir reçu' : 'demande le paiement de'} la somme de <strong>${rent.total_amount}€</strong> (${numberToWords(rent.total_amount)} euros) ${rent.paid_date ? 'de' : 'à'} Monsieur/Madame ${tenant.first_name} ${tenant.last_name}, locataire dudit logement, pour ${rent.paid_date ? 'le paiement du' : 'le'} loyer et charges de la période du ${periodStart} au ${periodEnd}.</p>
+        </div>
+
+        <div class="footer">
+            <p>Fait le ${new Date().toLocaleDateString('fr-FR')}</p>
+            <p>Signature du propriétaire</p>
+            <div style="height: 60px; border-bottom: 1px solid #000; width: 200px; margin-left: auto;"></div>
+        </div>
+    </body>
+    </html>
+  `
 
 function numberToWords(num: number): string {
   const ones = ['', 'un', 'deux', 'trois', 'quatre', 'cinq', 'six', 'sept', 'huit', 'neuf']
@@ -420,7 +524,7 @@ async function generatePDFFromTemplate(supabaseClient: any, templateUrl: string,
   } catch (error) {
     console.error('Error processing template:', error)
     console.log('Falling back to default HTML generation')
-    const htmlContent = generateReceiptHTML(rent)
+    const htmlContent = await generateReceiptHTMLWithOwnerData(supabaseClient, rent)
     return generatePDFFromHTML(htmlContent)
   }
 }
@@ -442,6 +546,7 @@ async function generatePDFFromHTML(htmlContent: string): Promise<Uint8Array> {
   const tenant = extractDataFromHTML(htmlContent, 'tenant')
   const amounts = extractDataFromHTML(htmlContent, 'amounts')
   const dates = extractDataFromHTML(htmlContent, 'dates')
+  const owner = extractDataFromHTML(htmlContent, 'owner')
   
   // Title
   page.drawText('QUITTANCE DE LOYER', {
@@ -461,14 +566,14 @@ async function generatePDFFromHTML(htmlContent: string): Promise<Uint8Array> {
     font: boldFont,
   })
   y -= 25
-  page.drawText('Nom/Société : [Nom du propriétaire]', {
+  page.drawText(`Nom/Société : ${owner.name || '[Nom du propriétaire]'}`, {
     x: leftMargin,
     y: y,
     size: 10,
     font: font,
   })
   y -= 20
-  page.drawText('Adresse : [Adresse du propriétaire]', {
+  page.drawText(`Adresse : ${owner.address || '[Adresse du propriétaire]'}`, {
     x: leftMargin,
     y: y,
     size: 10,
@@ -634,6 +739,16 @@ async function generatePDFFromHTML(htmlContent: string): Promise<Uint8Array> {
 function extractDataFromHTML(htmlContent: string, section: string): any {
   // Extract data from the HTML content for structured display
   const doc = htmlContent
+  
+  if (section === 'owner') {
+    const nameMatch = doc.match(/data-owner-name="([^"]*)"/)
+    const addressMatch = doc.match(/data-owner-address="([^"]*)"/)
+    
+    return {
+      name: nameMatch ? nameMatch[1] : '',
+      address: addressMatch ? addressMatch[1] : ''
+    }
+  }
   
   if (section === 'tenant') {
     const nameMatch = doc.match(/Nom:<\/span>\s*([^<]+)/)

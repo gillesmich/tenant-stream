@@ -472,27 +472,32 @@ const Rents = () => {
                          <Eye className="w-4 h-4 mr-1" />
                          Voir
                        </Button>
-                       {rent.status === "paye" && (
-                         <>
-                           <Button 
-                             variant="outline" 
-                             size="sm"
-                             onClick={() => downloadReceipt(rent.id)}
-                           >
-                             <Download className="w-4 h-4 mr-1" />
-                             Télécharger
-                           </Button>
-                           <Button 
-                             variant="outline" 
-                             size="sm"
-                             onClick={() => sendReceiptByEmail(rent.id)}
-                             disabled={rent.receipt_sent}
-                           >
-                             <Send className="w-4 h-4 mr-1" />
-                             {rent.receipt_sent ? "Envoyée" : "Envoyer"}
-                           </Button>
-                         </>
-                       )}
+                        {rent.status === "paye" && (
+                          <>
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              onClick={() => downloadReceipt(rent.id)}
+                            >
+                              <Download className="w-4 h-4 mr-1" />
+                              Télécharger
+                            </Button>
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              onClick={() => sendReceiptByEmail(rent.id)}
+                              disabled={false}
+                            >
+                              <Send className="w-4 h-4 mr-1" />
+                              {rent.receipt_sent ? "Renvoyer" : "Envoyer"}
+                            </Button>
+                            {rent.receipt_sent && (
+                              <span className="text-xs text-success px-2 py-1 bg-success/10 rounded">
+                                ✓ Envoyée
+                              </span>
+                            )}
+                          </>
+                        )}
                        {rent.status !== "paye" && (
                          <Button variant="outline" size="sm">
                            <Mail className="w-4 h-4 mr-1" />

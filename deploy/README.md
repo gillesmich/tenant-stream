@@ -1,97 +1,129 @@
-# OVH Server Deployment Guide
+# Deployment Scripts for Supabase Rental Application
 
-This guide will help you deploy your rental application to an OVH server.
+This directory contains comprehensive deployment scripts for your Supabase-integrated rental application.
 
-## Prerequisites
+## 📁 Files Overview
 
-- An OVH server (VPS or dedicated server) with Ubuntu 20.04+ or Debian 11+
-- Root or sudo access to the server
-- A domain name pointing to your server's IP address (for SSL setup)
-- Your application code in a Git repository
+- `full-app-deployment.sh` - Complete deployment script with SSL and monitoring
+- `quick-frontend-only.sh` - Fast frontend-only deployment (recommended for Supabase apps)
+- `update-app.sh` - Update deployed application with latest changes
+- `monitor-app.sh` - Monitor application health and system status
 
-## Important Notes
+## 🚀 Quick Start
 
-### Backend (Supabase)
-Your application uses **Supabase as a hosted backend service**. You don't need to install anything on your server for the backend. Supabase handles:
-- Database hosting
-- Authentication
-- Edge Functions
-- File Storage
+### Option 1: Quick Frontend Deployment (Recommended)
 
-Your current Supabase configuration:
-- Project ID: `vbpyykdkaoktzuewbzzl`
-- URL: `https://vbpyykdkaoktzuewbzzl.supabase.co`
-
-## Deployment Steps
-
-### 1. Prepare Your Repository
-
-First, make sure your code is in a Git repository (GitHub, GitLab, etc.):
+For Supabase applications, you typically only need to deploy the frontend:
 
 ```bash
-# If you haven't already, create a repository and push your code
-git init
-git add .
-git commit -m "Initial commit"
-git remote add origin https://github.com/yourusername/your-repo.git
-git push -u origin main
+# Download and run the quick deployment script
+wget https://raw.githubusercontent.com/gillesmich/tenant-stream/main/deploy/quick-frontend-only.sh
+chmod +x quick-frontend-only.sh
+./quick-frontend-only.sh yourdomain.com https://github.com/yourusername/yourrepo.git
 ```
 
-### 2. Initial Server Setup
+### Option 2: Full Deployment
 
-Connect to your OVH server via SSH:
+For complete setup with all features:
 
 ```bash
-ssh root@your-server-ip
-# or if you have a user account:
-ssh username@your-server-ip
+# Download and run the full deployment script
+wget https://raw.githubusercontent.com/gillesmich/tenant-stream/main/deploy/full-app-deployment.sh
+chmod +x full-app-deployment.sh
+./full-app-deployment.sh yourdomain.com https://github.com/yourusername/yourrepo.git
 ```
 
-### 3. Deploy the Frontend
+## 📋 Prerequisites
 
-Upload the deployment script to your server and run it:
+1. **Ubuntu 20.04+ server** with sudo access
+2. **Domain name** pointing to your server's IP
+3. **Git repository** with your application code
+4. **Supabase project** already configured
+
+## 🔧 What Gets Installed
+
+- **Node.js 18+** - For building the React application
+- **Nginx** - Web server for serving the frontend
+- **Certbot** - For SSL certificate management
+- **UFW Firewall** - Basic security configuration
+
+## 📝 Usage Instructions
+
+### Initial Deployment
+
+1. **Prepare your server:**
+   ```bash
+   # Update your server
+   sudo apt update && sudo apt upgrade -y
+   
+   # Ensure you have curl and wget
+   sudo apt install -y curl wget
+   ```
+
+2. **Run deployment:**
+   ```bash
+   # For quick frontend-only deployment
+   ./quick-frontend-only.sh yourdomain.com
+   
+   # OR for full deployment
+   ./full-app-deployment.sh yourdomain.com https://github.com/yourusername/yourrepo.git
+   ```
+
+### Updating Your Application
 
 ```bash
-# Upload the script (from your local machine)
-scp deploy/install-frontend.sh root@your-server-ip:/tmp/
-
-# Connect to your server and run the script
-ssh root@your-server-ip
-chmod +x /tmp/install-frontend.sh
-/tmp/install-frontend.sh
+# Update the deployed application
+./update-app.sh
 ```
 
-**Important**: Before running the script, edit it to replace:
-- `https://github.com/yourusername/your-repo.git` with your actual repository URL
-- `your-domain.com` with your actual domain name
-
-### 4. Configure Domain (Optional but Recommended)
-
-If you have a domain name:
-
-1. Point your domain's A record to your server's IP address
-2. Wait for DNS propagation (can take up to 24 hours)
-3. Run the SSL setup script:
+### Monitoring
 
 ```bash
-# Upload and run SSL setup
-scp deploy/setup-ssl.sh root@your-server-ip:/tmp/
-ssh root@your-server-ip
-chmod +x /tmp/setup-ssl.sh
-/tmp/setup-ssl.sh yourdomain.com
+# Check application health
+./monitor-app.sh
 ```
 
-### 5. Future Updates
+## 🌐 Domain Configuration
 
-To update your application with new changes:
+Before running the deployment scripts:
 
-```bash
-# Upload the update script
-scp deploy/update-app.sh root@your-server-ip:/tmp/
-ssh root@your-server-ip
-chmod +x /tmp/update-app.sh
-/tmp/update-app.sh
-```
+1. **Point your domain to your server:**
+   - Create an A record pointing `yourdomain.com` to your server's IP
+   - Create an A record pointing `www.yourdomain.com` to your server's IP
+
+2. **Wait for DNS propagation** (usually 5-30 minutes)
+
+3. **Verify DNS propagation:**
+   ```bash
+   nslookup yourdomain.com
+   ```
+
+## 🔐 SSL Certificate
+
+The deployment scripts automatically:
+- Install Certbot
+- Obtain SSL certificates from Let's Encrypt
+- Configure automatic renewal
+- Redirect HTTP to HTTPS
+
+## 📊 Post-Deployment
+
+After successful deployment:
+
+1. **Test your application:**
+   - Visit `https://yourdomain.com`
+   - Check that authentication works with Supabase
+   - Verify all features are functional
+
+2. **Monitor regularly:**
+   ```bash
+   ./monitor-app.sh
+   ```
+
+3. **Update when needed:**
+   ```bash
+   ./update-app.sh
+   ```
 
 ## Accessing Your Application
 

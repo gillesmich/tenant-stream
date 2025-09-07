@@ -5,10 +5,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import Navigation from "@/components/ui/navigation";
-import { FileText, Download, PenTool, Clock, Eye, CheckCircle } from "lucide-react";
+import { FileText, Download, PenTool, Clock, Eye, CheckCircle, User } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 
 const TenantDocuments = () => {
   const { user } = useAuth();
@@ -200,12 +200,22 @@ const TenantDocuments = () => {
       <Navigation />
       <div className="container mx-auto px-4 py-8 pt-24">
         <div className="mb-8">
-          <h1 className="text-4xl font-bold text-foreground mb-2">
-            Mes Documents
-          </h1>
-          <p className="text-muted-foreground">
-            Consultez vos contrats et documents liés à vos locations
-          </p>
+          <div className="flex justify-between items-start mb-4">
+            <div>
+              <h1 className="text-4xl font-bold text-foreground mb-2">
+                Mes Documents
+              </h1>
+              <p className="text-muted-foreground">
+                Consultez vos contrats et documents liés à vos locations
+              </p>
+            </div>
+            <Button asChild variant="outline">
+              <Link to="/tenant-profile">
+                <User className="w-4 h-4 mr-2" />
+                Mon profil
+              </Link>
+            </Button>
+          </div>
         </div>
 
         {/* Section des baux à valider */}

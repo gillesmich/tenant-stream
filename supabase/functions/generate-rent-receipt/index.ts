@@ -58,7 +58,7 @@ serve(async (req) => {
     } else {
       // Use default HTML generation
       const htmlContent = generateReceiptHTML(rent)
-      pdfBuffer = generatePDFFromHTML(htmlContent)
+      pdfBuffer = await generatePDFFromHTML(htmlContent)
     }
 
     return new Response(pdfBuffer, {
@@ -409,59 +409,257 @@ async function generatePDFFromTemplate(supabaseClient: any, templateUrl: string,
   }
 }
 
-function generatePDFFromHTML(htmlContent: string): Uint8Array {
-  // Enhanced PDF generation with better formatting
-  const currentDate = new Date().toLocaleDateString('fr-FR')
+async function generatePDFFromHTML(htmlContent: string): Promise<Uint8Array> {
+  // Create a proper PDF using pdf-lib instead of raw PDF code
+  const pdfDoc = await PDFDocument.create()
+  const page = pdfDoc.addPage([595, 842]) // A4 size
+  const font = await pdfDoc.embedFont(StandardFonts.Helvetica)
+  const boldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold)
   
-  const pdfHeader = `%PDF-1.4
-1 0 obj
-<< /Type /Catalog /Pages 2 0 R >>
-endobj
-2 0 obj
-<< /Type /Pages /Kids [3 0 R] /Count 1 >>
-endobj
-3 0 obj
-<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 4 0 R /F2 5 0 R >> >> /Contents 6 0 R >>
-endobj
-4 0 obj
-<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
-endobj
-5 0 obj
-<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>
-endobj
-6 0 obj
-<< /Length 7 0 R >>
-stream
-BT
-/F2 16 Tf
-200 750 Td
-(QUITTANCE DE LOYER) Tj
-0 -40 Td
-/F1 12 Tf
-(Document généré automatiquement le ${currentDate}) Tj
-0 -30 Td
-(Utilisez un template personnalisé pour plus de détails) Tj
-ET
-endstream
-endobj
-7 0 obj
-200
-endobj
-xref
-0 8
-0000000000 65535 f 
-0000000009 00000 n 
-0000000058 00000 n 
-0000000115 00000 n 
-0000000245 00000 n 
-0000000312 00000 n 
-0000000379 00000 n 
-0000000579 00000 n 
-trailer
-<< /Size 8 /Root 1 0 R >>
-startxref
-598
-%%EOF`
+  const { width, height } = page.getSize()
+  let y = height - 80
+  const leftMargin = 50
+  const rightMargin = width - 50
+  
+  // Extract data from HTML content for structured PDF
+  const property = extractDataFromHTML(htmlContent, 'property')
+  const tenant = extractDataFromHTML(htmlContent, 'tenant')
+  const amounts = extractDataFromHTML(htmlContent, 'amounts')
+  const dates = extractDataFromHTML(htmlContent, 'dates')
+  
+  // Title
+  page.drawText('QUITTANCE DE LOYER', {
+    x: leftMargin,
+    y: y,
+    size: 20,
+    font: boldFont,
+    color: rgb(0, 0, 0),
+  })
+  y -= 60
+  
+  // Landlord section
+  page.drawText('BAILLEUR :', {
+    x: leftMargin,
+    y: y,
+    size: 12,
+    font: boldFont,
+  })
+  y -= 25
+  page.drawText('Nom/Société : [Nom du propriétaire]', {
+    x: leftMargin,
+    y: y,
+    size: 10,
+    font: font,
+  })
+  y -= 20
+  page.drawText('Adresse : [Adresse du propriétaire]', {
+    x: leftMargin,
+    y: y,
+    size: 10,
+    font: font,
+  })
+  y -= 40
+  
+  // Tenant section
+  page.drawText('LOCATAIRE :', {
+    x: leftMargin,
+    y: y,
+    size: 12,
+    font: boldFont,
+  })
+  y -= 25
+  page.drawText(`Nom : ${tenant.name || '[Nom du locataire]'}`, {
+    x: leftMargin,
+    y: y,
+    size: 10,
+    font: font,
+  })
+  y -= 40
+  
+  // Property section
+  page.drawText('BIEN LOUÉ :', {
+    x: leftMargin,
+    y: y,
+    size: 12,
+    font: boldFont,
+  })
+  y -= 25
+  page.drawText(`Adresse : ${property.address || '[Adresse du bien]'}`, {
+    x: leftMargin,
+    y: y,
+    size: 10,
+    font: font,
+  })
+  y -= 20
+  page.drawText(`Ville : ${property.city || '[Ville]'} ${property.postalCode || '[Code postal]'}`, {
+    x: leftMargin,
+    y: y,
+    size: 10,
+    font: font,
+  })
+  y -= 20
+  page.drawText(`Type : ${property.type || '[Type de bien]'}`, {
+    x: leftMargin,
+    y: y,
+    size: 10,
+    font: font,
+  })
+  y -= 40
+  
+  // Payment details
+  page.drawText('DÉTAILS DU PAIEMENT :', {
+    x: leftMargin,
+    y: y,
+    size: 12,
+    font: boldFont,
+  })
+  y -= 25
+  page.drawText(`Période : ${dates.period || '[Période]'}`, {
+    x: leftMargin,
+    y: y,
+    size: 10,
+    font: font,
+  })
+  y -= 20
+  page.drawText(`Date de paiement : ${dates.payment || 'Non payé'}`, {
+    x: leftMargin,
+    y: y,
+    size: 10,
+    font: font,
+  })
+  y -= 20
+  page.drawText(`Loyer : ${amounts.rent || '0'}€`, {
+    x: leftMargin,
+    y: y,
+    size: 10,
+    font: font,
+  })
+  y -= 20
+  if (amounts.charges && parseFloat(amounts.charges) > 0) {
+    page.drawText(`Charges : ${amounts.charges}€`, {
+      x: leftMargin,
+      y: y,
+      size: 10,
+      font: font,
+    })
+    y -= 20
+  }
+  page.drawText(`TOTAL PAYÉ : ${amounts.total || '0'}€`, {
+    x: leftMargin,
+    y: y,
+    size: 12,
+    font: boldFont,
+  })
+  y -= 40
+  
+  // Declaration text
+  const declarationText = `Je soussigné(e), propriétaire du logement désigné ci-dessus, ${dates.payment ? 'reconnaît avoir reçu' : 'demande le paiement de'} la somme de ${amounts.total || '0'}€ ${dates.payment ? 'de' : 'à'} ${tenant.name || 'Monsieur/Madame [Nom du locataire]'}, locataire dudit logement, pour ${dates.payment ? 'le paiement du' : 'le'} loyer et charges de la période ${dates.period || '[période]'}.`
+  
+  // Word wrap for declaration
+  const words = declarationText.split(' ')
+  let line = ''
+  const maxWidth = rightMargin - leftMargin - 20
+  
+  for (const word of words) {
+    const testLine = line + word + ' '
+    const testWidth = font.widthOfTextAtSize(testLine, 10)
+    
+    if (testWidth > maxWidth && line.length > 0) {
+      page.drawText(line.trim(), {
+        x: leftMargin,
+        y: y,
+        size: 10,
+        font: font,
+      })
+      y -= 20
+      line = word + ' '
+    } else {
+      line = testLine
+    }
+  }
+  
+  if (line.trim().length > 0) {
+    page.drawText(line.trim(), {
+      x: leftMargin,
+      y: y,
+      size: 10,
+      font: font,
+    })
+    y -= 40
+  }
+  
+  // Signature section
+  page.drawText(`Fait le ${new Date().toLocaleDateString('fr-FR')}`, {
+    x: rightMargin - 200,
+    y: y,
+    size: 10,
+    font: font,
+  })
+  y -= 20
+  page.drawText('Signature du propriétaire', {
+    x: rightMargin - 200,
+    y: y,
+    size: 10,
+    font: font,
+  })
+  
+  // Signature line
+  page.drawLine({
+    start: { x: rightMargin - 200, y: y - 40 },
+    end: { x: rightMargin - 50, y: y - 40 },
+    thickness: 1,
+    color: rgb(0, 0, 0),
+  })
+  
+  const pdfBytes = await pdfDoc.save()
+  return pdfBytes
+}
 
-  return new TextEncoder().encode(pdfHeader)
+function extractDataFromHTML(htmlContent: string, section: string): any {
+  // Extract data from the HTML content for structured display
+  const doc = htmlContent
+  
+  if (section === 'tenant') {
+    const nameMatch = doc.match(/Nom:<\/span>\s*([^<]+)/)
+    return {
+      name: nameMatch ? nameMatch[1].trim() : ''
+    }
+  }
+  
+  if (section === 'property') {
+    const addressMatch = doc.match(/Adresse:<\/span>\s*([^<]+)/)
+    const cityMatch = doc.match(/Ville:<\/span>\s*([^<]+)/)
+    const typeMatch = doc.match(/Type:<\/span>\s*([^<]+)/)
+    
+    return {
+      address: addressMatch ? addressMatch[1].trim() : '',
+      city: cityMatch ? cityMatch[1].trim().split(' ')[0] : '',
+      postalCode: cityMatch ? cityMatch[1].trim().split(' ')[1] : '',
+      type: typeMatch ? typeMatch[1].trim() : ''
+    }
+  }
+  
+  if (section === 'amounts') {
+    const rentMatch = doc.match(/Loyer:<\/span>\s*([0-9.]+)/)
+    const chargesMatch = doc.match(/Charges:<\/span>\s*([0-9.]+)/)
+    const totalMatch = doc.match(/Total payé:<\/span>\s*([0-9.]+)/)
+    
+    return {
+      rent: rentMatch ? rentMatch[1] : '',
+      charges: chargesMatch ? chargesMatch[1] : '',
+      total: totalMatch ? totalMatch[1] : ''
+    }
+  }
+  
+  if (section === 'dates') {
+    const periodMatch = doc.match(/Période:<\/span>\s*([^<]+)/)
+    const paymentMatch = doc.match(/Date de paiement:<\/span>\s*([^<]+)/)
+    
+    return {
+      period: periodMatch ? periodMatch[1].trim() : '',
+      payment: paymentMatch ? paymentMatch[1].trim() : ''
+    }
+  }
+  
+  return {}
 }

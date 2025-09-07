@@ -44,7 +44,7 @@ EOF
 
 echo "📋 Creating essential tables..."
 
-# Create minimal schema (only essential tables)
+# Create minimal schema (only essential tables) - Fixed with TCP connection
 PGPASSWORD=$DB_PASSWORD psql -h 127.0.0.1 -U $DB_USER -d $DB_NAME << 'EOF'
 -- Users/Profiles
 CREATE TABLE profiles (

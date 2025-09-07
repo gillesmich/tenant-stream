@@ -85,11 +85,10 @@ const TenantProfile = () => {
 
     setSaving(true);
     try {
-      // Mettre à jour le profil principal
+      // Mettre à jour le profil principal avec UPDATE
       const { error: mainError } = await supabase
         .from('profiles')
-        .upsert({
-          user_id: user.id,
+        .update({
           first_name: profile.first_name,
           last_name: profile.last_name,
           email: profile.email,
@@ -100,12 +99,16 @@ const TenantProfile = () => {
           postal_code: profile.postal_code,
           country: profile.country,
           updated_at: new Date().toISOString()
-        });
+        })
+        .eq('user_id', user.id);
 
-      if (mainError) throw mainError;
+      if (mainError) {
+        console.error('Main profile update error:', mainError);
+        throw mainError;
+      }
 
       // Mettre à jour ou créer le profil locataire
-      const { error: tenantError } = await supabase
+      const { error: tenantUpdateError } = await supabase
         .from('tenant_profiles')
         .upsert({
           user_id: user.id,
@@ -122,7 +125,10 @@ const TenantProfile = () => {
           updated_at: new Date().toISOString()
         });
 
-      if (tenantError) throw tenantError;
+      if (tenantUpdateError) {
+        console.error('Tenant profile update error:', tenantUpdateError);
+        // Ne pas bloquer pour l'erreur tenant profile car c'est optionnel
+      }
 
       toast({
         title: "Profil mis à jour",

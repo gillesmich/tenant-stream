@@ -144,9 +144,10 @@ const Rents = () => {
 
       if (error) throw error;
 
+      const currentRent = rents.find(r => r.id === rentId);
       toast({
         title: "Succès",
-        description: "Quittance envoyée par email et sauvegardée dans les documents",
+        description: currentRent?.receipt_sent ? "Quittance renvoyée par email et mise à jour dans les documents du locataire" : "Quittance envoyée par email et sauvegardée dans les documents du locataire",
       });
 
       fetchRents(); // Refresh to update receipt_sent status

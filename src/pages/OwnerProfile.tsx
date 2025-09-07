@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -22,6 +23,7 @@ interface Profile {
 }
 
 export default function OwnerProfile() {
+  const navigate = useNavigate()
   const { user } = useAuth()
   const [profile, setProfile] = useState<Profile | null>(null)
   const [loading, setLoading] = useState(true)
@@ -83,6 +85,10 @@ export default function OwnerProfile() {
         toast.error('Erreur lors de la sauvegarde')
       } else {
         toast.success('Profil mis à jour avec succès')
+        // Retourner au dashboard après sauvegarde
+        setTimeout(() => {
+          navigate('/')
+        }, 1500)
       }
     } catch (error) {
       console.error('Error:', error)

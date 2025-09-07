@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Plus, Search, Euro, Calendar, Mail, AlertTriangle, CheckCircle, Download, Settings, Send, Eye } from "lucide-react";
+import { Plus, Search, Euro, Calendar, Mail, AlertTriangle, CheckCircle, Download, Settings, Send, Eye, RotateCcw } from "lucide-react";
 import Navigation from "@/components/ui/navigation";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -487,14 +487,24 @@ const Rents = () => {
                               variant="outline" 
                               size="sm"
                               onClick={() => sendReceiptByEmail(rent.id)}
-                              disabled={false}
+                              className={rent.receipt_sent ? "border-orange-300 text-orange-600 hover:bg-orange-50" : ""}
                             >
-                              <Send className="w-4 h-4 mr-1" />
-                              {rent.receipt_sent ? "Renvoyer" : "Envoyer"}
+                              {rent.receipt_sent ? (
+                                <>
+                                  <RotateCcw className="w-4 h-4 mr-1" />
+                                  Renvoyer
+                                </>
+                              ) : (
+                                <>
+                                  <Send className="w-4 h-4 mr-1" />
+                                  Envoyer
+                                </>
+                              )}
                             </Button>
                             {rent.receipt_sent && (
-                              <span className="text-xs text-success px-2 py-1 bg-success/10 rounded">
-                                ✓ Envoyée
+                              <span className="text-xs text-success px-2 py-1 bg-success/10 rounded flex items-center">
+                                <CheckCircle className="w-3 h-3 mr-1" />
+                                Envoyée
                               </span>
                             )}
                           </>

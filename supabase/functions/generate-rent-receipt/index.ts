@@ -175,15 +175,21 @@ async function generateReceiptHTMLWithOwnerData(supabaseClient: any, rent: any):
       .single()
     
     if (ownerProfile) {
-      ownerName = ownerProfile.company || [ownerProfile.first_name, ownerProfile.last_name].filter(Boolean).join(' ')
+      // Utiliser prénom + nom comme demandé, ou société si renseignée
+      if (ownerProfile.company && ownerProfile.company.trim()) {
+        ownerName = ownerProfile.company
+      } else {
+        const nameParts = [ownerProfile.first_name, ownerProfile.last_name].filter(Boolean)
+        ownerName = nameParts.join(' ') || '[Nom du propriétaire]'
+      }
+      
+      // Utiliser adresse ligne 1 + code postal + ville comme demandé
       const addressParts = [
         ownerProfile.address_line1,
-        ownerProfile.address_line2,
         ownerProfile.postal_code,
-        ownerProfile.city,
-        ownerProfile.country
+        ownerProfile.city
       ].filter(Boolean)
-      ownerAddress = addressParts.join(', ')
+      ownerAddress = addressParts.join(', ') || '[Adresse du propriétaire]'
     }
   } catch (e) {
     console.log('Owner profile lookup failed, using defaults:', e?.message || e)
@@ -354,15 +360,21 @@ async function generatePDFFromTemplate(supabaseClient: any, templateUrl: string,
             .eq('user_id', rent.owner_id ?? rent.lease?.owner_id)
             .single()
           if (ownerProfile) {
-            ownerName = ownerProfile.company || [ownerProfile.first_name, ownerProfile.last_name].filter(Boolean).join(' ')
+            // Utiliser prénom + nom comme demandé, ou société si renseignée
+            if (ownerProfile.company && ownerProfile.company.trim()) {
+              ownerName = ownerProfile.company
+            } else {
+              const nameParts = [ownerProfile.first_name, ownerProfile.last_name].filter(Boolean)
+              ownerName = nameParts.join(' ') || ''
+            }
+            
+            // Utiliser adresse ligne 1 + code postal + ville comme demandé
             const addressParts = [
               ownerProfile.address_line1,
-              ownerProfile.address_line2,
               ownerProfile.postal_code,
-              ownerProfile.city,
-              ownerProfile.country
+              ownerProfile.city
             ].filter(Boolean)
-            ownerAddress = addressParts.join(', ')
+            ownerAddress = addressParts.join(', ') || ''
           }
         } catch (e) {
           console.log('Owner profile lookup failed, continuing without:', e?.message || e)

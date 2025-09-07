@@ -21,7 +21,7 @@ const TenantDocuments = () => {
   const navigate = useNavigate();
 
   const documentTypes = [
-    { value: "contrat_location", label: "Contrat de location" },
+    { value: "bail", label: "Contrat de location" },
     { value: "etat_lieux_entree", label: "État des lieux d'entrée" },
     { value: "etat_lieux_sortie", label: "État des lieux de sortie" },
     { value: "quittance_loyer", label: "Quittance de loyer" },

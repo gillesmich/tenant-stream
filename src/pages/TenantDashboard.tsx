@@ -343,7 +343,7 @@ const TenantDashboard = () => {
                           </Button>
                         )}
                         
-                        {!doc.signed && doc.document_type !== 'contrat_location' && (
+                        {!doc.signed && doc.document_type !== 'bail' && (
                           <Button 
                             size="sm" 
                             onClick={() => handleSignDocument(doc.id)}

@@ -109,14 +109,14 @@ serve(async (req) => {
       ],
     });
 
-    // Mettre à jour le statut du bail
+    // Mettre à jour uniquement le timestamp du bail (éviter les statuts invalides)
     const { error: updateError } = await supabaseAdmin
       .from("leases")
-      .update({ status: "envoye", updated_at: new Date().toISOString() })
+      .update({ updated_at: new Date().toISOString() })
       .eq("id", leaseId);
 
     if (updateError) {
-      console.error("Erreur MAJ statut bail:", updateError);
+      console.error("Erreur MAJ bail:", updateError);
     }
 
     // Sauvegarder le PDF dans le stockage et créer un document en base
@@ -141,7 +141,7 @@ serve(async (req) => {
         .from('documents')
         .insert({
           title: `Contrat de location - ${lease.properties?.title || 'Propriété'}`,
-          document_type: 'contrat_location',
+          document_type: 'bail',
           owner_id: lease.owner_id,
           lease_id: leaseId,
           property_id: lease.property_id,

@@ -1,12 +1,12 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Menu, X, Home, Users, FileText, DollarSign, Settings, LogOut, Shield, ClipboardList } from "lucide-react";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuthWithNavigation } from "@/hooks/useAuthWithNavigation";
 import { useLocation, Link } from "react-router-dom";
 
 const Navigation = () => {
   const [isOpen, setIsOpen] = useState(false);
-  const { signOut, user, userRole } = useAuth();
+  const { signOut, user, userRole } = useAuthWithNavigation();
 
   // Navigation pour les propriétaires
   const ownerNavItems = [

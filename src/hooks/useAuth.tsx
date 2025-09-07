@@ -185,13 +185,15 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         console.log('Supabase signOut successful');
       }
 
-      console.log('Redirecting to /auth...');
-      window.location.href = "/auth";
+      // Note: Navigation should be handled by components using this hook
+      console.log('Logout process completed');
     } catch (error) {
       console.error("Error signing out:", error);
-      // Force cleanup even if signOut fails
-      console.log('Force redirecting to /auth due to error...');
-      window.location.href = "/auth";
+      // Clear state even if signOut fails
+      setUser(null);
+      setSession(null);
+      setUserProfile(null);
+      setUserRole(null);
     }
   };
 

@@ -267,6 +267,7 @@ async function generateReceiptHTMLWithOwnerData(supabaseClient: any, rent: any):
     </body>
     </html>
   `
+}
 
 function numberToWords(num: number): string {
   const ones = ['', 'un', 'deux', 'trois', 'quatre', 'cinq', 'six', 'sept', 'huit', 'neuf']

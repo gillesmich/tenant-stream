@@ -7,6 +7,9 @@ set -e
 
 echo "🚀 Updating frontend to use local API..."
 
+# Create directories if they don't exist
+mkdir -p src/lib
+
 # Create new API client
 cat > src/lib/api.ts << 'EOF'
 const API_BASE_URL = 'http://localhost:3001/api';

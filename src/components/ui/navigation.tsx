@@ -18,7 +18,7 @@ const Navigation = () => {
     { name: "Loyers", href: "/rents", icon: DollarSign },
     { name: "Documents", href: "/documents", icon: FileText },
     { name: "Cautions", href: "/cautions", icon: Shield },
-    { name: "Paramètres", href: "/settings", icon: Settings },
+    { name: "Paramètres", href: "/profile", icon: Settings },
   ];
 
   // Navigation pour les locataires

@@ -350,40 +350,55 @@ export type Database = {
       }
       profiles: {
         Row: {
+          address_line1: string | null
+          address_line2: string | null
           avatar_url: string | null
+          city: string | null
           company: string | null
+          country: string | null
           created_at: string
           email: string | null
           first_name: string | null
           id: string
           last_name: string | null
           phone: string | null
+          postal_code: string | null
           updated_at: string
           user_id: string
           user_type: string | null
         }
         Insert: {
+          address_line1?: string | null
+          address_line2?: string | null
           avatar_url?: string | null
+          city?: string | null
           company?: string | null
+          country?: string | null
           created_at?: string
           email?: string | null
           first_name?: string | null
           id?: string
           last_name?: string | null
           phone?: string | null
+          postal_code?: string | null
           updated_at?: string
           user_id: string
           user_type?: string | null
         }
         Update: {
+          address_line1?: string | null
+          address_line2?: string | null
           avatar_url?: string | null
+          city?: string | null
           company?: string | null
+          country?: string | null
           created_at?: string
           email?: string | null
           first_name?: string | null
           id?: string
           last_name?: string | null
           phone?: string | null
+          postal_code?: string | null
           updated_at?: string
           user_id?: string
           user_type?: string | null

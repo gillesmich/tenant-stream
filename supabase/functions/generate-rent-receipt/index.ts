@@ -240,16 +240,25 @@ async function generatePDFFromTemplate(supabaseClient: any, templateUrl: string,
 
       // If there are fields, attempt intelligent mapping based on field names
       if (fields.length > 0) {
-        // Fetch owner profile for landlord name
+        // Fetch owner profile for landlord name and address
         let ownerName = ''
+        let ownerAddress = ''
         try {
           const { data: ownerProfile } = await supabaseClient
             .from('profiles')
-            .select('first_name,last_name,company')
+            .select('first_name,last_name,company,address_line1,address_line2,city,postal_code,country')
             .eq('user_id', rent.owner_id ?? rent.lease?.owner_id)
             .single()
           if (ownerProfile) {
             ownerName = ownerProfile.company || [ownerProfile.first_name, ownerProfile.last_name].filter(Boolean).join(' ')
+            const addressParts = [
+              ownerProfile.address_line1,
+              ownerProfile.address_line2,
+              ownerProfile.postal_code,
+              ownerProfile.city,
+              ownerProfile.country
+            ].filter(Boolean)
+            ownerAddress = addressParts.join(', ')
           }
         } catch (e) {
           console.log('Owner profile lookup failed, continuing without:', e?.message || e)
@@ -265,6 +274,10 @@ async function generatePDFFromTemplate(supabaseClient: any, templateUrl: string,
           proprietaire: ownerName,
           owner: ownerName,
           landlord: ownerName,
+          adressebailleur: ownerAddress,
+          adresseproprietaire: ownerAddress,
+          owneraddress: ownerAddress,
+          landlordaddress: ownerAddress,
           adresse: property.address ?? '',
           address: property.address ?? '',
           ville: property.city ?? '',
@@ -289,6 +302,7 @@ async function generatePDFFromTemplate(supabaseClient: any, templateUrl: string,
           if (direct) return values[direct]
           if (key.includes('locataire') || key.includes('tenant')) return values.locataire
           if (key.includes('bailleur') || key.includes('proprietaire') || key.includes('owner') || key.includes('landlord')) return values.bailleur
+          if (key.includes('adressebailleur') || key.includes('adresseproprietaire') || key.includes('owneraddress') || key.includes('landlordaddress')) return values.adressebailleur
           if (key.includes('adresse') || key.includes('address')) return values.adresse
           if (key.includes('ville') || key.includes('city')) return values.ville
           if (key.includes('codepostal') || key.includes('postal') || key.includes('cp')) return values.codepostal
@@ -326,27 +340,29 @@ async function generatePDFFromTemplate(supabaseClient: any, templateUrl: string,
           console.log('No fields matched by name; applying sequential fallback mapping', { templateName })
           const monthLabel = periodStart.toLocaleString('fr-FR', { month: 'long', year: 'numeric' })
           const seqValues = [
-            // 1. Bailleur (owner)
-            (values.bailleur || ''),
-            // 2. Locataire (tenant)
-            (values.locataire || ''),
-            // 3. Adresse du bien
-            (values.adresse || ''),
-            // 4. Code postal
-            (values.codepostal || ''),
-            // 5. Ville
-            (values.ville || ''),
-            // 6. Mois/Période
+            // 1. Mois/Période (souvent en premier sur les quittances)
             (values.mois || monthLabel || ''),
-            // 7. Loyer
+            // 2. Bailleur (owner)
+            (values.bailleur || ''),
+            // 3. Adresse du bailleur
+            (values.adressebailleur || ownerAddress || ''),
+            // 4. Locataire (tenant)
+            (values.locataire || ''),
+            // 5. Adresse du bien
+            (values.adresse || ''),
+            // 6. Code postal du bien
+            (values.codepostal || ''),
+            // 7. Ville du bien
+            (values.ville || ''),
+            // 8. Loyer
             (values.loyer || ''),
-            // 8. Charges
+            // 9. Charges
             (values.charges || ''),
-            // 9. Total
+            // 10. Total
             (values.total || ''),
-            // 10. Date
+            // 11. Date
             (values.date || ''),
-            // 11. Paiement (date ou statut)
+            // 12. Paiement (date ou statut)
             (values.paiement || '')
           ]
           const allFields = form.getFields()

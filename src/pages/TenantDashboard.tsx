@@ -20,45 +20,76 @@ const TenantDashboard = () => {
     if (!user) return;
 
     try {
-      // Find lease for this tenant
-      const { data: leaseData, error: leaseError } = await supabase
-        .from('leases')
-        .select(`
-          *,
-          properties (*)
-        `)
-        .eq('tenant_id', user.id)
-        .eq('status', 'actif')
-        .maybeSingle();
-
-      if (leaseError) throw leaseError;
-
-      setLease(leaseData);
-      setProperty(leaseData?.properties);
-
-      // Load documents related to this tenant's lease
-      const { data: docsData, error: docsError } = await supabase
-        .from('documents')
-        .select('*')
-        .or(`lease_id.eq.${leaseData?.id},property_id.eq.${leaseData?.property_id}`)
-        .order('created_at', { ascending: false });
-
-      if (docsError) throw docsError;
-
-      setDocuments(docsData || []);
-
-      // Load caution requests for this tenant's email
-      const { data: profileData } = await supabase
+      // Récupérer d'abord le profil utilisateur pour avoir l'email et le téléphone
+      const { data: profileData, error: profileError } = await supabase
         .from('profiles')
-        .select('email')
+        .select('email, phone')
         .eq('user_id', user.id)
         .single();
 
-      if (profileData?.email) {
+      if (profileError) {
+        console.error('Error loading user profile:', profileError);
+        return;
+      }
+
+      const userEmail = profileData?.email;
+      const userPhone = profileData?.phone;
+
+      if (!userEmail && !userPhone) {
+        console.error('No email or phone found for user');
+        return;
+      }
+
+      // Chercher les baux liés à cet utilisateur par email ou téléphone
+      let leaseQuery = supabase
+        .from('leases')
+        .select(`
+          *,
+          properties (*),
+          tenants (first_name, last_name, email)
+        `)
+        .order('created_at', { ascending: false });
+
+      // Construire les conditions OR pour email et téléphone
+      let orConditions = [];
+      if (userPhone) orConditions.push(`tenant_phone.eq.${encodeURIComponent(userPhone)}`);
+      if (userEmail) orConditions.push(`tenants.email.eq.${encodeURIComponent(userEmail)}`);
+
+      if (orConditions.length > 0) {
+        leaseQuery = leaseQuery.or(orConditions.join(','));
+      }
+
+      const { data: leaseData, error: leaseError } = await leaseQuery;
+
+      if (leaseError) {
+        console.error('Error loading lease:', leaseError);
+        return;
+      }
+
+      // Prendre le bail le plus récent
+      const activeLease = leaseData && leaseData.length > 0 ? leaseData[0] : null;
+      setLease(activeLease);
+      setProperty(activeLease?.properties);
+
+      // Charger les documents liés aux baux de ce locataire
+      if (activeLease) {
+        const { data: docsData, error: docsError } = await supabase
+          .from('documents')
+          .select('*')
+          .eq('lease_id', activeLease.id)
+          .order('created_at', { ascending: false });
+
+        if (!docsError) {
+          setDocuments(docsData || []);
+        }
+      }
+
+      // Charger les demandes de caution pour cet email
+      if (userEmail) {
         const { data: cautionData, error: cautionError } = await supabase
           .from('caution_requests')
           .select('*')
-          .eq('tenant_email', profileData.email)
+          .eq('tenant_email', userEmail)
           .order('created_at', { ascending: false });
 
         if (!cautionError) {

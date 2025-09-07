@@ -54,7 +54,27 @@ const TenantDocuments = () => {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setDocuments(data || []);
+
+      // Générer des URLs signées pour les fichiers stockés dans le bucket privé
+      const docs = data || [];
+      const signedDocs = await Promise.all(
+        docs.map(async (doc) => {
+          let signedUrl = doc.file_url as string | null;
+          try {
+            if (doc.file_url && !/^https?:\/\//.test(doc.file_url)) {
+              const { data: signed } = await supabase.storage
+                .from('documents')
+                .createSignedUrl(doc.file_url, 600);
+              signedUrl = signed?.signedUrl || null;
+            }
+          } catch (e) {
+            console.warn('Erreur création URL signée:', e);
+          }
+          return { ...doc, signed_url: signedUrl };
+        })
+      );
+
+      setDocuments(signedDocs);
     } catch (error) {
       console.error('Error loading documents:', error);
       toast({
@@ -343,18 +363,18 @@ const TenantDocuments = () => {
                       )}
                       
                       <div className="flex gap-2 pt-2">
-                        {doc.file_url && (
+                        {doc.signed_url && (
                           <Button variant="outline" size="sm" asChild>
-                            <a href={doc.file_url} target="_blank" rel="noopener noreferrer">
+                            <a href={doc.signed_url} target="_blank" rel="noopener noreferrer">
                               <Download className="w-4 h-4 mr-2" />
                               Télécharger
                             </a>
                           </Button>
                         )}
                         
-                        {doc.file_url && (
+                        {doc.signed_url && (
                           <Button variant="outline" size="sm" asChild>
-                            <a href={doc.file_url} target="_blank" rel="noopener noreferrer">
+                            <a href={doc.signed_url} target="_blank" rel="noopener noreferrer">
                               <Eye className="w-4 h-4" />
                             </a>
                           </Button>

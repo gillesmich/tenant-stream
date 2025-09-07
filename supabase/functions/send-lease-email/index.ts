@@ -119,8 +119,24 @@ serve(async (req) => {
       console.error("Erreur MAJ statut bail:", updateError);
     }
 
-    // Créer un document dans la base de données pour le PDF envoyé
+    // Sauvegarder le PDF dans le stockage et créer un document en base
     try {
+      const storagePath = `leases/${lease.owner_id}/baux/bail-${leaseId}.pdf`;
+
+      // Upload dans le bucket privé 'documents'
+      const { error: uploadErr } = await supabaseAdmin.storage
+        .from('documents')
+        .upload(storagePath, pdfBytes, {
+          contentType: 'application/pdf',
+          upsert: true,
+        });
+
+      if (uploadErr) {
+        console.error('Erreur upload bail PDF:', uploadErr);
+        throw uploadErr;
+      }
+
+      // Enregistrer une entrée dans la table documents
       const { error: docError } = await supabaseAdmin
         .from('documents')
         .insert({
@@ -129,18 +145,21 @@ serve(async (req) => {
           owner_id: lease.owner_id,
           lease_id: leaseId,
           property_id: lease.property_id,
-          file_url: `${SUPABASE_URL}/functions/v1/generate-lease-pdf?leaseId=${leaseId}`,
+          file_url: storagePath,
           auto_generated: true,
-          source_type: 'lease_pdf'
+          source_type: 'lease_pdf',
+          file_name: `bail-${leaseId}.pdf`,
+          file_size: pdfBytes.length,
+          mime_type: 'application/pdf',
         });
 
       if (docError) {
-        console.error("Error creating document:", docError);
+        console.error('Erreur création document (bail):', docError);
       } else {
-        console.log("Document created successfully for lease PDF");
+        console.log('Document bail créé et stocké avec succès');
       }
     } catch (docCreateError) {
-      console.error("Error creating document:", docCreateError);
+      console.error('Erreur création/sauvegarde document bail:', docCreateError);
       // Ne pas faire échouer l'envoi d'email si la création du document échoue
     }
 

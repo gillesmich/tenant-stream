@@ -7,13 +7,15 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Home, Mail, Lock, User, Phone, Building, UserCheck, Users } from "lucide-react";
+import { Home, Mail, Lock, User, Phone, Building, UserCheck, Users, ArrowLeft } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 const Auth = () => {
   const [loading, setLoading] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [checkingAuth, setCheckingAuth] = useState(true);
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [resetEmail, setResetEmail] = useState("");
   const [loginForm, setLoginForm] = useState({ email: "", password: "" });
   const [signupForm, setSignupForm] = useState({
     email: "",
@@ -180,6 +182,34 @@ const Auth = () => {
     }
   };
 
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(resetEmail, {
+        redirectTo: `${window.location.origin}/auth?reset=true`,
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Email envoyé",
+        description: "Vérifiez votre boîte email pour réinitialiser votre mot de passe",
+      });
+      setShowForgotPassword(false);
+      setResetEmail("");
+    } catch (error: any) {
+      toast({
+        title: "Erreur",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-secondary/20 to-accent/10 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
@@ -193,59 +223,112 @@ const Auth = () => {
           <p className="text-muted-foreground mt-2">Gestion locative simplifiée</p>
         </div>
 
-        <Tabs defaultValue="login" className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="login">Connexion</TabsTrigger>
-            <TabsTrigger value="signup">Inscription</TabsTrigger>
-          </TabsList>
+        {showForgotPassword ? (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowForgotPassword(false)}
+                  className="p-0 h-auto"
+                >
+                  <ArrowLeft className="w-4 h-4" />
+                </Button>
+                Mot de passe oublié
+              </CardTitle>
+              <CardDescription>
+                Entrez votre email pour recevoir un lien de réinitialisation
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleForgotPassword} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="reset-email">Email</Label>
+                  <div className="relative">
+                    <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      id="reset-email"
+                      type="email"
+                      placeholder="votre@email.com"
+                      className="pl-10"
+                      value={resetEmail}
+                      onChange={(e) => setResetEmail(e.target.value)}
+                      required
+                    />
+                  </div>
+                </div>
+                <Button type="submit" className="w-full" disabled={loading}>
+                  {loading ? "Envoi..." : "Envoyer le lien"}
+                </Button>
+              </form>
+            </CardContent>
+          </Card>
+        ) : (
+          <Tabs defaultValue="login" className="w-full">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="login">Connexion</TabsTrigger>
+              <TabsTrigger value="signup">Inscription</TabsTrigger>
+            </TabsList>
 
-          <TabsContent value="login">
-            <Card>
-              <CardHeader>
-                <CardTitle>Se connecter</CardTitle>
-                <CardDescription>
-                  Accédez à votre espace de gestion locative
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <form onSubmit={handleLogin} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="login-email">Email</Label>
-                    <div className="relative">
-                      <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        id="login-email"
-                        type="email"
-                        placeholder="votre@email.com"
-                        className="pl-10"
-                        value={loginForm.email}
-                        onChange={(e) => setLoginForm({ ...loginForm, email: e.target.value })}
-                        required
-                      />
+            <TabsContent value="login">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Se connecter</CardTitle>
+                  <CardDescription>
+                    Accédez à votre espace de gestion locative
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <form onSubmit={handleLogin} className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="login-email">Email</Label>
+                      <div className="relative">
+                        <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          id="login-email"
+                          type="email"
+                          placeholder="votre@email.com"
+                          className="pl-10"
+                          value={loginForm.email}
+                          onChange={(e) => setLoginForm({ ...loginForm, email: e.target.value })}
+                          required
+                        />
+                      </div>
                     </div>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="login-password">Mot de passe</Label>
-                    <div className="relative">
-                      <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        id="login-password"
-                        type="password"
-                        placeholder="••••••••"
-                        className="pl-10"
-                        value={loginForm.password}
-                        onChange={(e) => setLoginForm({ ...loginForm, password: e.target.value })}
-                        required
-                      />
+                    <div className="space-y-2">
+                      <Label htmlFor="login-password">Mot de passe</Label>
+                      <div className="relative">
+                        <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          id="login-password"
+                          type="password"
+                          placeholder="••••••••"
+                          className="pl-10"
+                          value={loginForm.password}
+                          onChange={(e) => setLoginForm({ ...loginForm, password: e.target.value })}
+                          required
+                        />
+                      </div>
                     </div>
-                  </div>
-                  <Button type="submit" className="w-full" disabled={loading}>
-                    {loading ? "Connexion..." : "Se connecter"}
-                  </Button>
-                </form>
-              </CardContent>
-            </Card>
-          </TabsContent>
+                    <div className="flex justify-end">
+                      <Button
+                        type="button"
+                        variant="link"
+                        size="sm"
+                        onClick={() => setShowForgotPassword(true)}
+                        className="p-0 h-auto text-sm text-muted-foreground hover:text-primary"
+                      >
+                        Mot de passe oublié ?
+                      </Button>
+                    </div>
+                    <Button type="submit" className="w-full" disabled={loading}>
+                      {loading ? "Connexion..." : "Se connecter"}
+                    </Button>
+                  </form>
+                </CardContent>
+              </Card>
+            </TabsContent>
 
           <TabsContent value="signup">
             <Card>
@@ -371,6 +454,7 @@ const Auth = () => {
             </Card>
           </TabsContent>
         </Tabs>
+        )}
       </div>
     </div>
   );
